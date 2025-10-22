@@ -1,0 +1,6 @@
+@ClientLoanServiceAPI_HostAddress = http://localhost:5023
+
+GET {{ClientLoanServiceAPI_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="BankingService/BankingService.csproj" />
+  <Project Path="ClientLoanServiceAPI/ClientLoanServiceAPI.csproj" />
+  <Project Path="ScoringServiceAPI/ScoringServiceAPI.csproj" />
+  <Project Path="UserService/UserService.csproj" Id="4771e62d-3fb5-4222-bc3e-6e34bade908f" />
+</Solution>
