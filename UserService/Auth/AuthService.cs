@@ -35,10 +35,10 @@ namespace UserService.Auth
 
             var claims = new List<Claim>
             {
-                new Claim("username", userByEmail.Username),
-                new Claim(ClaimTypes.Name, userByEmail.Username),
+                new Claim("userid", userByEmail.Id.ToString()),
+                new Claim("name", userByEmail.Username),
                 new Claim("clientId", userByEmail.ClientId),
-                new Claim(ClaimTypes.Email, userByEmail.Email),
+                new Claim("mail", userByEmail.Email),
             };
 
             var roles = userByEmail.Roles.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
@@ -118,17 +118,23 @@ namespace UserService.Auth
                     IssuerSigningKey = new SymmetricSecurityKey(key)
                 }, out SecurityToken validatedToken);
 
-                var resp=new UserInfo
+
+                var resp = new UserInfo
                 {
-                    
+                    UserId = int.Parse(principal.FindFirst("userid")?.Value),
+                    Username = principal.FindFirst("name")?.Value,
+                    ClientId = principal.FindFirst("clientId")?.Value,
+                    Email = principal.FindFirst("mail")?.Value,
+
                 };
+
                 return Result.Ok(resp);
             }
             catch (SecurityTokenExpiredException)
             {
                 return Result.Fail("Invalid token");
             }
-            catch (Exception)
+            catch (Exception ex)
             {
                 return Result.Fail("Invalid token");
             }

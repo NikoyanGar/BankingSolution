@@ -80,11 +80,11 @@ namespace UserService.Controllers
                 return Results.ValidationProblem(validationResult.ToDictionary());
             }
 
-            var userId = await _authService.ValidateToken(token);
-            if (userId == null)
+            var userInfoResult = await _authService.ValidateToken(token);
+            if (userInfoResult.IsFailed)
                 return Unauthorized("Invalid or expired token.");
 
-            return Ok(new { userId });
+            return Ok(userInfoResult.Value);
         }
 
         [HttpPost("GenerateToken")]
