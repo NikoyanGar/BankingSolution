@@ -15,6 +15,7 @@ namespace ClientLoanServiceAPI.Services
 
         public async Task<LoanResponse> GetLoanByClientIdAsync(LoanRequest loanRequest)
         {
+            //variable name loanJson is misleading here since it is actually a list of LoanHistory objects
             var loanJson = await _loanHistoryRepository.GetLoanByClientIdAsync(loanRequest.ClientId);
 
             if (loanJson == null)

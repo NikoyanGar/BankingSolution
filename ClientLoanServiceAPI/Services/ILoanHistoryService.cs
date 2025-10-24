@@ -2,6 +2,7 @@
 
 namespace ClientLoanServiceAPI.Services
 {
+    //Adjust naming
     public interface ILoanHistoryService
     {
         public Task AddLoanAsync(LoanHistory loanHistory);

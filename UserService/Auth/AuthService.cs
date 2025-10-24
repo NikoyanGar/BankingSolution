@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Options;
+﻿using FluentResults;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
@@ -10,7 +11,7 @@ using UserService.Repositories;
 
 namespace UserService.Auth
 {
-    public class AuthService: IAuthService
+    public class AuthService : IAuthService
     {
         private readonly IUserRepository? _userRepository;
         private readonly JwtOptions? _jwtOptions;
@@ -23,6 +24,7 @@ namespace UserService.Auth
         public async Task<TokenResponse?> GenerateToken(string email, string password)
         {
             var userByEmail = await _userRepository.GetByEmailAsync(email);
+
             if (userByEmail == null) return null;
 
             if (!PasswordHasher.VerifyPassword(password, userByEmail.Password))
@@ -76,10 +78,11 @@ namespace UserService.Auth
         public async Task<User?> RegisterAsync(RegisterDto registerDto)
         {
             var existingUserMail = await _userRepository.GetByEmailAsync(registerDto.Email);
+
             var existingUserUsername = await _userRepository.GetByUsernameAsync(registerDto.Username);
             if (existingUserMail != null || existingUserUsername != null) return null;
 
-            var clientId = await _userRepository.GetNextClientIdAsync();
+            var clientId = Guid.NewGuid().ToString();
             var user = new User
             {
                 Username = registerDto.Username,
@@ -96,16 +99,15 @@ namespace UserService.Auth
             return user;
         }
 
-        public async Task<string> ValidateToken(string token)
+        public async Task<Result<UserInfo>> ValidateToken(string token)
         {
             if (string.IsNullOrWhiteSpace(token))
-                return null;
-
-            var tokenHandler = new JwtSecurityTokenHandler();
-            var key = Encoding.UTF8.GetBytes(_jwtOptions.Key);
+                return Result.Fail("Invalid token");
 
             try
             {
+                var tokenHandler = new JwtSecurityTokenHandler();
+                var key = Encoding.UTF8.GetBytes(_jwtOptions.Key);
                 var principal = tokenHandler.ValidateToken(token, new TokenValidationParameters
                 {
                     ValidateIssuer = true,
@@ -116,17 +118,19 @@ namespace UserService.Auth
                     IssuerSigningKey = new SymmetricSecurityKey(key)
                 }, out SecurityToken validatedToken);
 
-                return principal.FindFirstValue(ClaimTypes.Name);
+                var resp=new UserInfo
+                {
+                    
+                };
+                return Result.Ok(resp);
             }
             catch (SecurityTokenExpiredException)
             {
-                // token is expired
-                return null;
+                return Result.Fail("Invalid token");
             }
             catch (Exception)
             {
-                // token invalid
-                return null;
+                return Result.Fail("Invalid token");
             }
         }
     }

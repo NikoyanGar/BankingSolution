@@ -2,7 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using UserService.Auth;
 using UserService.Models;
-using static UserService.Middlewares.RoleAuthorizationMiddleware;
+using static UserService.Middlewares.AuthenticationMiddleware;
 
 namespace UserService.Controllers
 {

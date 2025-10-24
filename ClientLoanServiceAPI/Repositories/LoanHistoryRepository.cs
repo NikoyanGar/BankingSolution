@@ -13,10 +13,10 @@ namespace ClientLoanServiceAPI.Repositories
         {
             _distributedCache = distributedCache;
         }
-
+        // Adjust deserialization to handle both single and multiple entries
         public async Task<List<LoanHistory>> GetLoanByClientIdAsync(string clientId)
         {
-            var key = $"{prefix}{clientId}";
+            var key = $"{prefix}{clientId}"; // Use consistent key prefix
             var loanInfoJson = await _distributedCache.GetStringAsync(key);
             if (string.IsNullOrEmpty(loanInfoJson)) return new List<LoanHistory>();
 
@@ -30,7 +30,7 @@ namespace ClientLoanServiceAPI.Repositories
                 return single is null ? new List<LoanHistory>() : new List<LoanHistory> { single };
             }
         }
-
+        //The same 
         public async Task AddLoanAsync(LoanHistory loanHistory)
         {
             var key = $"{prefix}{loanHistory.ClientId}";

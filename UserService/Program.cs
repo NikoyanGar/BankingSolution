@@ -53,7 +53,6 @@ namespace UserService
             app.UseSwaggerUI();
             app.UseJwtAuthentication();
             app.UseAuthentication();
-            app.UseRoleAuthorization();
             app.UseAuthorization();
 
             app.MapControllers();

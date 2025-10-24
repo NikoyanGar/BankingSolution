@@ -2,6 +2,7 @@
 
 namespace ClientLoanServiceAPI.Repositories
 {
+    //Adjust nameing
     public interface ILoanHistoryRepository
     {
         public Task AddLoanAsync(LoanHistory loanHistory);

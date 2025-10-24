@@ -1,7 +1,9 @@
-﻿using Microsoft.IdentityModel.Tokens;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using UserService.Auth;
 using UserService.Options;
 
 namespace UserService.Middlewares
@@ -11,49 +13,70 @@ namespace UserService.Middlewares
         private readonly RequestDelegate _next;
         private readonly ILogger<AuthenticationMiddleware>? _logger;
         private readonly JwtOptions? _jwtOptions;
-        public AuthenticationMiddleware(RequestDelegate next, ILogger<AuthenticationMiddleware>? logger, IConfiguration config)
+        public AuthenticationMiddleware(
+            RequestDelegate next,
+            ILogger<AuthenticationMiddleware>? logger,
+            IConfiguration config)
         {
             _next = next;
             _logger = logger;
             _jwtOptions = config.GetSection("Jwt").Get<JwtOptions>();
         }
 
-        public async Task InvokeAsync(HttpContext context)
+        public async Task InvokeAsync(HttpContext context, IAuthService authService)
         {
+
+
+            var endpoint = context.GetEndpoint();
+
+            // Check if endpoint has [Roles("admin,manager")] attribute
+            var roleAttr = endpoint?.Metadata.GetMetadata<RolesAttribute>();
+            var Authorize = endpoint?.Metadata.GetMetadata<AuthorizeAttribute>();
+            if (Authorize == null)
+            {
+                await _next(context);
+                return;
+            }
+
             var token = context.Request.Headers["Authorization"].FirstOrDefault()?.Split(" ").Last();
             if (token != null)
             {
-                try
+                var userResult = await authService.ValidateToken(token);
+                
+                if (roleAttr != null)
                 {
-                    var tokenHandler = new JwtSecurityTokenHandler();
-                    var key = Encoding.UTF8.GetBytes(_jwtOptions!.Key);
+                    var userRoles = context.User.Claims.Where(c => c.Type == ClaimTypes.Role).Select(c => c.Value).ToList();
 
-                    tokenHandler.ValidateToken(token, new TokenValidationParameters
+                    if (!userRoles.Intersect(roleAttr.Roles.Split(',')).Any())
                     {
-                        ValidateIssuerSigningKey = true,
-                        IssuerSigningKey = new SymmetricSecurityKey(key),
-                        ValidateIssuer = true,
-                        ValidateAudience = true,
-                        ValidIssuer = _jwtOptions.Issuer,
-                        ValidAudience = _jwtOptions.Audience,
-                        ClockSkew = TimeSpan.Zero
-                    }, out var validatedToken);
-
-                    context.User = ((JwtSecurityToken)validatedToken).Claims.Aggregate(new ClaimsPrincipal(), (principal, claim) =>
-                    {
-                        var identity = principal.Identity as ClaimsIdentity ?? new ClaimsIdentity();
-                        identity.AddClaim(claim);
-                        principal.AddIdentity(identity);
-                        return principal;
-                    });
+                        _logger.LogWarning("User lacks required roles: {Roles}", roleAttr.Roles);
+                        context.Response.StatusCode = StatusCodes.Status403Forbidden;
+                        await context.Response.WriteAsJsonAsync(new { message = "Forbidden: insufficient role" });
+                        return;
+                    }
                 }
-                catch (Exception ex)
+
+                if (userResult.IsSuccess)
                 {
-                    _logger?.LogWarning("Token validation failed: {Message}", ex.Message);
+                    await _next(context);
+                }
+                else
+                {
+                    _logger?.LogWarning("Token validation failed: {Errors}", string.Join(", ", userResult.Errors));
+                    throw new SecurityTokenException("Invalid token");
                 }
             }
-            await _next(context);
         }
 
+        [AttributeUsage(AttributeTargets.Method | AttributeTargets.Class, AllowMultiple = false)]
+        public class RolesAttribute : Attribute
+        {
+            public string Roles { get; }
+
+            public RolesAttribute(string roles)
+            {
+                Roles = roles;
+            }
+        }
     }
 }

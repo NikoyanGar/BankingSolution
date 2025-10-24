@@ -7,6 +7,9 @@ namespace ClientLoanServiceAPI.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    //TODO: Loans Controller
+    //Change response types to proper IActionResult types
+    // no need for routes like addLoanHistory 
     public class LoanController : ControllerBase
     {
         private readonly ILoanHistoryService _loanHistoryService;
@@ -35,7 +38,7 @@ namespace ClientLoanServiceAPI.Controllers
                 }
             );
         }
-
+        //handle not found case too
         [HttpPost("getLoanHistory")]
         public async Task<object> GetLoanHistory([FromBody] LoanRequest loanRequest)
         {

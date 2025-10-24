@@ -7,6 +7,7 @@ namespace ScoringServiceAPI.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    // return type should be IActionResult, no need for additional routing
     public class ScoringController : ControllerBase
     {
         private readonly ScoreService _scoreService;

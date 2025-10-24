@@ -3,6 +3,7 @@ using ScoringServiceAPI.Repositories;
 
 namespace ScoringServiceAPI.Services
 {
+    //2 abstractions , why ? and add interface for service
     public class ScoreService
     {
         private readonly IScoreRepository _scoreRepository;

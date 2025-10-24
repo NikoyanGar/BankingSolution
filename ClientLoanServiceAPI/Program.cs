@@ -30,8 +30,8 @@ namespace ClientLoanServiceAPI
             var app = builder.Build();
 
             // Configure the HTTP request pipeline.
-            app.UseGlobalExceptionHandler();
-            app.UseRequestLogging();
+            app.UseGlobalExceptionHandler();//no nee for wrapping 
+            app.UseRequestLogging();//no nee for wrapping 
             app.UseHttpsRedirection();
             app.UseSwagger();
             app.UseSwaggerUI();

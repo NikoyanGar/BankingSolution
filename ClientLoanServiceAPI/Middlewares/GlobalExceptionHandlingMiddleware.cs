@@ -3,6 +3,7 @@ using System.Text.Json;
 
 namespace ClientLoanServiceAPI.Middlewares
 {
+    //use problem details format for error response
     public class GlobalExceptionHandlingMiddleware
     {
         private readonly RequestDelegate _next;

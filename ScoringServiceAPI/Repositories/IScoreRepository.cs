@@ -2,6 +2,7 @@
 
 namespace ScoringServiceAPI.Repositories
 {
+    //adjust namings
     public interface IScoreRepository
     {
         public Task<ClientScore> GetByClientIdAsync(string clientId);

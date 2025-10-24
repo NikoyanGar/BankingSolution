@@ -3,6 +3,7 @@ using System.Text.Json;
 
 namespace ScoringServiceAPI.Middlewares
 {
+    //the same comment as in BankingService
     public class GlobalExceptionMiddleware
     {
         private readonly RequestDelegate _next;
