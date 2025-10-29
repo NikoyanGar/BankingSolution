@@ -2,7 +2,7 @@ using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using UserService.Auth;
 using UserService.Data;
-using UserService.Middlewares.Extensions;
+using UserService.Middlewares;
 using UserService.Options;
 using UserService.Repositories;
 using UserService.Services;
@@ -35,23 +35,18 @@ namespace UserService
             builder.Services.AddControllers();
 
             builder.Services.AddValidatorsFromAssemblyContaining<UserRegistrationValidator>();
-            //builder.Services.AddValidatorsFromAssemblyContaining<UserLoginValidator>();
-            //builder.Services.AddValidatorsFromAssemblyContaining<UserTokenValidator>();
-            //builder.Services.AddValidatorsFromAssemblyContaining<UserValidator>();
-            //builder.Services.AddValidatorsFromAssemblyContaining<UserIdValidator>();
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen();
 
             var app = builder.Build();
 
             // Configure the HTTP request pipeline.
-
-            app.UseGlobalExceptionHandler();
-            app.UseRequestLogging();
+            app.UseMiddleware<GlobalExceptionMiddleware>();
+            app.UseMiddleware<RequestLoggingMiddleware>();
             app.UseHttpsRedirection();
             app.UseSwagger();
             app.UseSwaggerUI();
-            //app.UseJwtAuthentication();
+            app.UseMiddleware<AuthenticationMiddleware>();
             app.UseAuthentication();
             app.UseAuthorization();
 

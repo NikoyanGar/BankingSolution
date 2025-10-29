@@ -1,5 +1,4 @@
-﻿using FluentResults;
-using FluentValidation;
+﻿using FluentValidation;
 using Microsoft.AspNetCore.Mvc;
 using UserService.Auth;
 using UserService.Models.DTOs;
