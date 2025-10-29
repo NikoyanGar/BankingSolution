@@ -1,4 +1,4 @@
-﻿namespace UserService.Models
+﻿namespace UserService.Models.DTOs
 {
     public class LoginDto
     {

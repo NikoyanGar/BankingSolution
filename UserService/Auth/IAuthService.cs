@@ -1,13 +1,14 @@
 ﻿using FluentResults;
-using UserService.Models;
+using UserService.Models.DTOs;
+using UserService.Models.Responses;
 
 namespace UserService.Auth
 {
     public interface IAuthService
     {
         public Task<Result<UserInfo>> ValidateToken(string token);
-        public Task<TokenResponse?> GenerateToken(string email, string password);
-        public Task<User?> RegisterAsync(RegisterDto registerDto);
-        public Task<User?> LoginAsync(LoginDto loginDto);
+        public Task<TokenResponse?> GenerateToken(LoginDto loginDto, CancellationToken cancellationToken);
+        public Task<RegistrationResponse> RegisterAsync(RegisterDto registerDto, CancellationToken cancellationToken);
+        public Task<LoginResponse> LoginAsync(LoginDto loginDto, CancellationToken cancellationToken);
     }
 }

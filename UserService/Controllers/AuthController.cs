@@ -1,7 +1,9 @@
-﻿using FluentValidation;
+﻿using FluentResults;
+using FluentValidation;
 using Microsoft.AspNetCore.Mvc;
 using UserService.Auth;
-using UserService.Models;
+using UserService.Models.DTOs;
+using UserService.Models.Responses;
 using static UserService.Middlewares.AuthenticationMiddleware;
 
 namespace UserService.Controllers
@@ -40,35 +42,39 @@ namespace UserService.Controllers
         }
 
         [HttpPost("Register")]
-        public async Task<object> Register([FromBody] RegisterDto registerDto)
+        public async Task<ActionResult<RegistrationResponse>> Register([FromBody] RegisterDto registerDto, CancellationToken cancellationToken)
         {
-            var validationResult = await _registerValidator.ValidateAsync(registerDto);
-            if (!validationResult.IsValid)
+            var result = await _registerValidator!.ValidateAsync(registerDto);
+            if (!result.IsValid)
             {
-                return Results.ValidationProblem(validationResult.ToDictionary());
+                return BadRequest(new ValidationProblemDetails(result.ToDictionary()));
             }
 
-            var response = await _authService.RegisterAsync(registerDto);
-            if (response == null)
-                return BadRequest("Email/Username already exists.");
+            var registerResponse = await _authService!.RegisterAsync(registerDto, cancellationToken);
+            if (!string.IsNullOrEmpty(registerResponse.ErrorMessage))
+            {
+                return Conflict(registerResponse.ErrorMessage);
+            }
 
-            return Ok(response);
+            return CreatedAtAction(
+                nameof(Register), 
+                new { id = registerResponse?.User?.Id }, registerResponse?.User);
         }
 
         [HttpPost("Login")]
-        public async Task<object> Login([FromBody] LoginDto loginDto)
+        public async Task<ActionResult<LoginResponse>> Login([FromBody] LoginDto loginDto, CancellationToken cancellationToken)
         {
-            var validationResult = await _loginValidator.ValidateAsync(loginDto);
-            if (!validationResult.IsValid)
+            var result = await _loginValidator!.ValidateAsync(loginDto);
+            if (!result.IsValid)
             {
-                return Results.ValidationProblem(validationResult.ToDictionary());
+                return BadRequest(new ValidationProblemDetails(result.ToDictionary()));
             }
 
-            var response = await _authService.LoginAsync(loginDto);
-            if (response == null)
+            var loginResponse = await _authService!.LoginAsync(loginDto, cancellationToken);
+            if (loginResponse == null)
                 return Unauthorized("Invalid credentials.");
 
-            return Ok(response);
+            return Ok(loginResponse);
         }
 
         [HttpGet("ValidateToken")]
@@ -87,22 +93,36 @@ namespace UserService.Controllers
             return Ok(userInfoResult.Value);
         }
 
-        [HttpPost("GenerateToken")]
-        public async Task<object> GenerateToken([FromBody] LoginDto loginDto)
+        [HttpPost("token")]
+        public async Task<ActionResult<TokenResponse>> GenerateToken([FromBody] LoginDto loginDto, CancellationToken cancellationToken)
         {
-            var validationResult = await _loginValidator.ValidateAsync(loginDto);
-            if (!validationResult.IsValid)
+            if(_loginValidator is null)
             {
-                return Results.ValidationProblem(validationResult.ToDictionary());
+                return Problem(
+                    detail: "Validation service is not available.",
+                    statusCode: StatusCodes.Status500InternalServerError
+                );
             }
-            var tokenResult = await _authService!.GenerateToken(loginDto.Email, loginDto.Password);
 
-            return Ok(new
+            var result = await _loginValidator.ValidateAsync(loginDto);
+            if (!result.IsValid)
             {
-                Token = tokenResult?.Token,
-                ExpiresAt = tokenResult?.ExpiresAt
-            });
-        }   
+                return BadRequest(new ValidationProblemDetails(result.ToDictionary()));
+            }
 
+            if(_authService is null)
+            {
+                return Problem(
+                    detail: "Authentication service is not available.",
+                    statusCode: StatusCodes.Status500InternalServerError
+                );
+            }
+
+            var tokenResponse = await _authService.GenerateToken(loginDto, cancellationToken);
+            if (tokenResponse == null)
+                return Unauthorized("Invalid email or password.");
+
+            return Ok(tokenResponse);
+        }
     }
 }

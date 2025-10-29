@@ -1,6 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using UserService.Data;
-using UserService.Models;
+using UserService.Data.Entities;
 
 namespace UserService.Repositories
 {
@@ -13,10 +13,10 @@ namespace UserService.Repositories
             _userDbContext = userDbContext;
         }
 
-        public async Task Create(User user)
+        public async Task Create(User user, CancellationToken cancellationToken = default)
         {
-            await _userDbContext.Users.AddAsync(user);
-            await _userDbContext.SaveChangesAsync();
+            await _userDbContext.Users.AddAsync(user, cancellationToken);
+            await _userDbContext.SaveChangesAsync(cancellationToken);
         }
 
         public void Delete(User user)
@@ -25,47 +25,30 @@ namespace UserService.Repositories
             _userDbContext.SaveChangesAsync();
         }
 
-        public async Task<List<User>> GetAllAsync()
+        public async Task<List<User>> GetAllAsync(CancellationToken cancellationToken = default)
         {
-            return await _userDbContext.Users.ToListAsync();
+            return await _userDbContext.Users.ToListAsync(cancellationToken);
         }
 
-        public async Task<User?> GetByEmailAsync(string email)
+        public async Task<User?> GetByEmailAsync(string email, CancellationToken cancellationToken = default)
         {
-            return await _userDbContext.Users.FirstOrDefaultAsync(userItem => userItem.Email.ToLower() == email.ToString().ToLower());
+            return await _userDbContext.Users.FirstOrDefaultAsync(userItem => userItem.Email.ToLower() == email.ToString().ToLower(), cancellationToken);
         }
 
-        public async Task<User> GetByIdAsync(int id)
+        public async Task<User> GetByIdAsync(int id, CancellationToken cancellationToken = default)
         {
-            return await _userDbContext.Users.FindAsync(id);
+            return await _userDbContext.Users.FindAsync(id, cancellationToken);
         }
 
-        public async Task<User?> GetByUsernameAsync(string username)
+        public async Task<User?> GetByUsernameAsync(string username, CancellationToken cancellationToken = default)
         {
-            return await _userDbContext.Users.FirstOrDefaultAsync(userItem => userItem.Username.ToLower() == username.ToString().ToLower());
+            return await _userDbContext.Users.FirstOrDefaultAsync(userItem => userItem.Username.ToLower() == username.ToString().ToLower(), cancellationToken);
         }
 
         public void Update(User user)
         {
             _userDbContext?.Users.Update(user);
             _userDbContext.SaveChangesAsync();
-        }
-
-        public async Task<string> GetNextClientIdAsync()
-        {
-            int nextNumber = 1;
-            const string prefix = "C";
-            var lastUser = await _userDbContext.Users.Where(u => u.ClientId != null).OrderByDescending(u => u.Id).FirstOrDefaultAsync();
-
-            if (lastUser != null)
-            {
-                var digits = new string(lastUser?.ClientId?.Where(char.IsDigit).ToArray());
-                Console.WriteLine($"digits: {digits}");
-                if (int.TryParse(digits, out var n))
-                    nextNumber = n + 1;
-            }
-
-            return $"{prefix}{nextNumber}";
         }
     }
 }

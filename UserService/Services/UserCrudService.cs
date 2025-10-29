@@ -1,4 +1,5 @@
-﻿using UserService.Models;
+﻿using System.Threading;
+using UserService.Data.Entities;
 using UserService.Repositories;
 
 namespace UserService.Services
@@ -14,34 +15,34 @@ namespace UserService.Services
             users = new List<User>();
         }
 
-        public async Task<User> CreateAsync(User user)
+        public async Task<User> CreateAsync(User user, CancellationToken cancellationToken)
         {
-            await _userRepository.Create(user);
+            await _userRepository.Create(user, cancellationToken);
             return user;
         }
 
-        public async Task<bool> DeleteAsync(int id)
+        public async Task<bool> DeleteAsync(int id, CancellationToken cancellationToken)
         {
-            var existing = await _userRepository.GetByIdAsync(id);
+            var existing = await _userRepository.GetByIdAsync(id, cancellationToken);
             if (existing == null) return false;
 
             _userRepository.Delete(existing);
             return true;
         }
 
-        public async Task<List<User>> GetAllAsync()
+        public async Task<List<User>> GetAllAsync(CancellationToken cancellationToken)
         {
-            return await _userRepository.GetAllAsync();
+            return await _userRepository.GetAllAsync(cancellationToken);
         }
 
-        public async Task<User?> GetByIdAsync(int id)
+        public async Task<User?> GetByIdAsync(int id, CancellationToken cancellationToken)
         {
-            return await _userRepository.GetByIdAsync(id);
+            return await _userRepository.GetByIdAsync(id, cancellationToken);
         }
 
-        public async Task<User?> UpdateAsync(int id, User user)
+        public async Task<User?> UpdateAsync(int id, User user, CancellationToken cancellationToken)
         {
-            var existing = await _userRepository.GetByIdAsync(id);
+            var existing = await _userRepository.GetByIdAsync(id, cancellationToken);
             if (existing == null) return null;
 
             existing.FirstName = user.FirstName;

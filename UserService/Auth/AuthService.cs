@@ -4,8 +4,10 @@ using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using UserService.Data.Entities;
 using UserService.Helpers;
-using UserService.Models;
+using UserService.Models.DTOs;
+using UserService.Models.Responses;
 using UserService.Options;
 using UserService.Repositories;
 
@@ -21,13 +23,13 @@ namespace UserService.Auth
             _jwtOptions = jwtOptions.Value;
         }
 
-        public async Task<TokenResponse?> GenerateToken(string email, string password)
+        public async Task<TokenResponse?> GenerateToken(LoginDto loginDto, CancellationToken cancellationToken)
         {
-            var userByEmail = await _userRepository.GetByEmailAsync(email);
+            var userByEmail = await _userRepository!.GetByEmailAsync(loginDto.Email, cancellationToken);
 
             if (userByEmail == null) return null;
 
-            if (!PasswordHasher.VerifyPassword(password, userByEmail.Password))
+            if (!PasswordHasher.VerifyPassword(loginDto.Password, userByEmail.Password))
                 return null;
 
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtOptions.Key));
@@ -63,24 +65,39 @@ namespace UserService.Auth
             };
         }
 
-        public async Task<User?> LoginAsync(LoginDto loginDto)
+        public async Task<LoginResponse> LoginAsync(LoginDto loginDto, CancellationToken cancellationToken)
         {
-            var userByMail = await _userRepository.GetByEmailAsync(loginDto.Email);
-            if (userByMail == null) return null;
+            var user = await _userRepository!.GetByEmailAsync(loginDto.Email, cancellationToken);
+            if (user == null) return null;
 
-            if (!PasswordHasher.VerifyPassword(loginDto.Password, userByMail.Password))
+            if (!PasswordHasher.VerifyPassword(loginDto.Password, user.Password))
                 return null;
 
-            //return GenerateToken(userByMail);
-            return userByMail;
+            var generatedToken = await GenerateToken(new LoginDto
+            {
+                Email = loginDto.Email,
+                Password = loginDto.Password
+            }, cancellationToken);
+
+            return new LoginResponse
+            {
+                Token = generatedToken?.Token,
+                ExpiresAt = generatedToken!.ExpiresAt
+            };
         }
 
-        public async Task<User?> RegisterAsync(RegisterDto registerDto)
+        public async Task<RegistrationResponse> RegisterAsync(RegisterDto registerDto, CancellationToken cancellationToken = default)
         {
-            var existingUserMail = await _userRepository.GetByEmailAsync(registerDto.Email);
-
-            var existingUserUsername = await _userRepository.GetByUsernameAsync(registerDto.Username);
-            if (existingUserMail != null || existingUserUsername != null) return null;
+            var existingUserMail = await _userRepository.GetByEmailAsync(registerDto.Email, cancellationToken);
+            if (existingUserMail != null)
+            {
+                return new RegistrationResponse { ErrorMessage = "Email already exists." };
+            }
+            var existingUserUsername = await _userRepository.GetByUsernameAsync(registerDto.Username, cancellationToken);
+            if (existingUserUsername != null)
+            {
+                return new RegistrationResponse { ErrorMessage = "Username already exists." };
+            }
 
             var clientId = Guid.NewGuid().ToString();
             var user = new User
@@ -94,9 +111,8 @@ namespace UserService.Auth
                 ClientId = clientId
             };
 
-            await _userRepository.Create(user);
-            //GenerateToken(user);
-            return user;
+            await _userRepository.Create(user, cancellationToken);
+            return new RegistrationResponse { User = user };
         }
 
         public async Task<Result<UserInfo>> ValidateToken(string token)
