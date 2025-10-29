@@ -35,50 +35,84 @@ namespace UserService.Controllers
             return Ok("Welcome to admin dashboard!");
         }
 
+
         [HttpGet("public")]
         public IActionResult GetPublicData()
         {
             return Ok("Anyone can access this endpoint.");
         }
 
-        //[HttpPost("Login")]
-        //public async Task<ActionResult<LoginResponse>> Login([FromBody] LoginDto loginDto, CancellationToken cancellationToken)
-        //{
-        //    var result = await _loginValidator!.ValidateAsync(loginDto);
-        //    if (!result.IsValid)
-        //    {
-        //        return BadRequest(new ValidationProblemDetails(result.ToDictionary()));
-        //    }
 
-        //    var loginResponse = await _authService!.LoginAsync(loginDto, cancellationToken);
-        //    if (loginResponse == null)
-        //        return Unauthorized("Invalid credentials.");
+        [HttpPost("login")]
+        public async Task<ActionResult<LoginResponse>> Login([FromBody] LoginDto loginDto, CancellationToken cancellationToken)
+        {
+            if (_loginValidator is null)
+            {
+                return Problem(
+                    detail: "Validation service is not available.",
+                    statusCode: StatusCodes.Status500InternalServerError
+                );
+            }
 
-        //    return Ok(loginResponse);
-        //}
+            var result = await _loginValidator.ValidateAsync(loginDto);
+            if (!result.IsValid)
+            {
+                return BadRequest(new ValidationProblemDetails(result.ToDictionary()));
+            }
 
-        //[HttpGet("ValidateToken")]
-        //public async Task<object> ValidateToken([FromQuery] string token)
-        //{
-        //    var validationResult = await _tokenValidator.ValidateAsync(token);
-        //    if (!validationResult.IsValid)
-        //    {
-        //        return Results.ValidationProblem(validationResult.ToDictionary());
-        //    }
+            if (_authService is null)
+            {
+                return StatusCode(500, "Authentication service is not available.");
+            }
+            var loginResponse = await _authService.LoginAsync(loginDto, cancellationToken);
+            if (loginResponse == null)
+                return Unauthorized("Invalid credentials.");
 
-        //    var userInfoResult = await _authService.ValidateToken(token);
-        //    if (userInfoResult.IsFailed)
-        //        return Unauthorized("Invalid or expired token.");
+            return Ok(loginResponse);
+        }
 
-        //    return Ok(userInfoResult.Value);
-        //}
 
+        [HttpGet("validate-token")]
+        public async Task<ActionResult<UserInfo>> ValidateToken([FromQuery] string token)
+        {
+            if (_tokenValidator is null)
+            {
+                return Problem(
+                    detail: "Validation service is not available.",
+                    statusCode: StatusCodes.Status500InternalServerError
+                );
+            }
+            var result = await _tokenValidator.ValidateAsync(token);
+            if (!result.IsValid)
+            {
+                return BadRequest(new ValidationProblemDetails(result.ToDictionary()));
+            }
+
+            if (_authService is null)
+            {
+                return StatusCode(500, "Authentication service is not available.");
+            }
+
+            var userInfoResponse = await _authService.ValidateToken(token);
+            if (userInfoResponse.IsFailed)
+                return Unauthorized("Invalid or expired token.");
+
+            return Ok(userInfoResponse.Value);
+        }
 
 
         [HttpPost("register")]
         public async Task<ActionResult<RegistrationResponse>> Register([FromBody] RegisterDto registerDto, CancellationToken cancellationToken)
         {
-            var result = await _registerValidator!.ValidateAsync(registerDto);
+            if (_registerValidator is null)
+            {
+                return Problem(
+                    detail: "Validation service is not available.",
+                    statusCode: StatusCodes.Status500InternalServerError
+                );
+            }
+
+            var result = await _registerValidator.ValidateAsync(registerDto);
             if (!result.IsValid)
             {
                 return BadRequest(new ValidationProblemDetails(result.ToDictionary()));
@@ -92,7 +126,7 @@ namespace UserService.Controllers
             var registerResponse = await _authService.RegisterAsync(registerDto, cancellationToken);
             if (!string.IsNullOrEmpty(registerResponse!.ErrorMessage))
             {
-                return StatusCode(500, "Internal Server Error");
+                return StatusCode(500, registerResponse.ErrorMessage);
             }
 
             return CreatedAtAction(

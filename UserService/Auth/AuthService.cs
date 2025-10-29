@@ -72,32 +72,40 @@ namespace UserService.Auth
             
         }
 
-        //public async Task<LoginResponse> LoginAsync(LoginDto loginDto, CancellationToken cancellationToken)
-        //{
-        //    var user = await _userRepository!.GetByEmailAsync(loginDto.Email, cancellationToken);
-        //    if (user == null) return null;
+        public async Task<LoginResponse> LoginAsync(LoginDto loginDto, CancellationToken cancellationToken)
+        {
+            var result = await _userRepository.GetByEmailAsync(loginDto.Email, cancellationToken);
 
-        //    if (!PasswordHasher.VerifyPassword(loginDto.Password, user.Password))
-        //        return null;
+            if (result.IsFailed)
+            {
+                return new LoginResponse { ErrorMessage = "Database error" };
+            }
 
-        //    var generatedToken = await GenerateToken(new LoginDto
-        //    {
-        //        Email = loginDto.Email,
-        //        Password = loginDto.Password
-        //    }, cancellationToken);
+            if (result.Value == null) return new LoginResponse { ErrorMessage = "User not found." };
 
-        //    return new LoginResponse
-        //    {
-        //        Token = generatedToken?.Token,
-        //        ExpiresAt = generatedToken!.ExpiresAt
-        //    };
-        //}
+            var user = result.Value;
+
+            if (!PasswordHasher.VerifyPassword(loginDto.Password, user.Password))
+                return new LoginResponse { ErrorMessage = "Invalid credentials." };
+
+            var generatedToken = await GenerateToken(new LoginDto
+            {
+                Email = loginDto.Email,
+                Password = loginDto.Password
+            }, cancellationToken);
+
+            return new LoginResponse
+            {
+                Token = generatedToken?.Token,
+                ExpiresAt = generatedToken!.ExpiresAt
+            };
+        }
 
         public async Task<RegistrationResponse?> RegisterAsync(RegisterDto registerDto, CancellationToken cancellationToken = default)
         {
             var existingUserMail = await _userRepository.GetByEmailAsync(registerDto.Email, cancellationToken);
 
-            if (existingUserMail.IsSuccess && existingUserMail != null)
+            if (existingUserMail.IsSuccess && existingUserMail.Value != null)
             {
                 return new RegistrationResponse { ErrorMessage = "Email already exists." };
             }
@@ -107,7 +115,7 @@ namespace UserService.Auth
             }
 
             var existingUserUsername = await _userRepository.GetByUsernameAsync(registerDto.Username, cancellationToken);
-            if (existingUserUsername.IsSuccess && existingUserUsername != null)
+            if (existingUserUsername.IsSuccess && existingUserUsername.Value != null)
             {
                 return new RegistrationResponse { ErrorMessage = "Username already exists." };
             }
@@ -132,46 +140,44 @@ namespace UserService.Auth
             return new RegistrationResponse { User = user };
         }
 
-        //public async Task<Result<UserInfo>> ValidateToken(string token)
-        //{
-        //    if (string.IsNullOrWhiteSpace(token))
-        //        return Result.Fail("Invalid token");
+        public async Task<Result<UserInfo>> ValidateToken(string token)
+        {
+            if (string.IsNullOrWhiteSpace(token))
+                return Result.Fail("Invalid token");
 
-        //    try
-        //    {
-        //        var tokenHandler = new JwtSecurityTokenHandler();
-        //        var key = Encoding.UTF8.GetBytes(_jwtOptions.Key);
-        //        var principal = tokenHandler.ValidateToken(token, new TokenValidationParameters
-        //        {
-        //            ValidateIssuer = true,
-        //            ValidateAudience = true,
-        //            ValidateLifetime = true,
-        //            ValidIssuer = _jwtOptions.Issuer,
-        //            ValidAudience = _jwtOptions.Audience,
-        //            IssuerSigningKey = new SymmetricSecurityKey(key)
-        //        }, out SecurityToken validatedToken);
+            try
+            {
+                var tokenHandler = new JwtSecurityTokenHandler();
+                var key = Encoding.UTF8.GetBytes(_jwtOptions.Key);
+                var principal = tokenHandler.ValidateToken(token, new TokenValidationParameters
+                {
+                    ValidateIssuer = true,
+                    ValidateAudience = true,
+                    ValidateLifetime = true,
+                    ValidIssuer = _jwtOptions.Issuer,
+                    ValidAudience = _jwtOptions.Audience,
+                    IssuerSigningKey = new SymmetricSecurityKey(key)
+                }, out SecurityToken validatedToken);
 
+                var resp = new UserInfo
+                {
+                    UserId = int.Parse(principal.FindFirst("userid")?.Value),
+                    Username = principal.FindFirst("name")?.Value,
+                    ClientId = principal.FindFirst("clientId")?.Value,
+                    Email = principal.FindFirst("mail")?.Value,
+                };
 
-        //        var resp = new UserInfo
-        //        {
-        //            UserId = int.Parse(principal.FindFirst("userid")?.Value),
-        //            Username = principal.FindFirst("name")?.Value,
-        //            ClientId = principal.FindFirst("clientId")?.Value,
-        //            Email = principal.FindFirst("mail")?.Value,
+                return Result.Ok(resp);
+            }
+            catch (SecurityTokenExpiredException)
+            {
+                return Result.Fail("Invalid token");
+            }
+            catch (Exception ex)
+            {
+                return Result.Fail("Invalid token");
+            }
+        }
 
-        //        };
-
-        //        return Result.Ok(resp);
-        //    }
-        //    catch (SecurityTokenExpiredException)
-        //    {
-        //        return Result.Fail("Invalid token");
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        return Result.Fail("Invalid token");
-        //    }
-        //}
-    
     }
 }
