@@ -41,7 +41,41 @@ namespace UserService.Controllers
             return Ok("Anyone can access this endpoint.");
         }
 
-        [HttpPost("Register")]
+        //[HttpPost("Login")]
+        //public async Task<ActionResult<LoginResponse>> Login([FromBody] LoginDto loginDto, CancellationToken cancellationToken)
+        //{
+        //    var result = await _loginValidator!.ValidateAsync(loginDto);
+        //    if (!result.IsValid)
+        //    {
+        //        return BadRequest(new ValidationProblemDetails(result.ToDictionary()));
+        //    }
+
+        //    var loginResponse = await _authService!.LoginAsync(loginDto, cancellationToken);
+        //    if (loginResponse == null)
+        //        return Unauthorized("Invalid credentials.");
+
+        //    return Ok(loginResponse);
+        //}
+
+        //[HttpGet("ValidateToken")]
+        //public async Task<object> ValidateToken([FromQuery] string token)
+        //{
+        //    var validationResult = await _tokenValidator.ValidateAsync(token);
+        //    if (!validationResult.IsValid)
+        //    {
+        //        return Results.ValidationProblem(validationResult.ToDictionary());
+        //    }
+
+        //    var userInfoResult = await _authService.ValidateToken(token);
+        //    if (userInfoResult.IsFailed)
+        //        return Unauthorized("Invalid or expired token.");
+
+        //    return Ok(userInfoResult.Value);
+        //}
+
+
+
+        [HttpPost("register")]
         public async Task<ActionResult<RegistrationResponse>> Register([FromBody] RegisterDto registerDto, CancellationToken cancellationToken)
         {
             var result = await _registerValidator!.ValidateAsync(registerDto);
@@ -50,53 +84,27 @@ namespace UserService.Controllers
                 return BadRequest(new ValidationProblemDetails(result.ToDictionary()));
             }
 
-            var registerResponse = await _authService!.RegisterAsync(registerDto, cancellationToken);
-            if (!string.IsNullOrEmpty(registerResponse.ErrorMessage))
+            if (_authService is null)
             {
-                return Conflict(registerResponse.ErrorMessage);
+                return StatusCode(500, "Authentication service is not available.");
+            }
+
+            var registerResponse = await _authService.RegisterAsync(registerDto, cancellationToken);
+            if (!string.IsNullOrEmpty(registerResponse!.ErrorMessage))
+            {
+                return StatusCode(500, "Internal Server Error");
             }
 
             return CreatedAtAction(
-                nameof(Register), 
+                nameof(Register),
                 new { id = registerResponse?.User?.Id }, registerResponse?.User);
         }
 
-        [HttpPost("Login")]
-        public async Task<ActionResult<LoginResponse>> Login([FromBody] LoginDto loginDto, CancellationToken cancellationToken)
-        {
-            var result = await _loginValidator!.ValidateAsync(loginDto);
-            if (!result.IsValid)
-            {
-                return BadRequest(new ValidationProblemDetails(result.ToDictionary()));
-            }
-
-            var loginResponse = await _authService!.LoginAsync(loginDto, cancellationToken);
-            if (loginResponse == null)
-                return Unauthorized("Invalid credentials.");
-
-            return Ok(loginResponse);
-        }
-
-        [HttpGet("ValidateToken")]
-        public async Task<object> ValidateToken([FromQuery] string token)
-        {
-            var validationResult = await _tokenValidator.ValidateAsync(token);
-            if (!validationResult.IsValid)
-            {
-                return Results.ValidationProblem(validationResult.ToDictionary());
-            }
-
-            var userInfoResult = await _authService.ValidateToken(token);
-            if (userInfoResult.IsFailed)
-                return Unauthorized("Invalid or expired token.");
-
-            return Ok(userInfoResult.Value);
-        }
 
         [HttpPost("token")]
         public async Task<ActionResult<TokenResponse>> GenerateToken([FromBody] LoginDto loginDto, CancellationToken cancellationToken)
         {
-            if(_loginValidator is null)
+            if (_loginValidator is null)
             {
                 return Problem(
                     detail: "Validation service is not available.",
@@ -110,19 +118,24 @@ namespace UserService.Controllers
                 return BadRequest(new ValidationProblemDetails(result.ToDictionary()));
             }
 
-            if(_authService is null)
+            if (_authService is null)
             {
-                return Problem(
-                    detail: "Authentication service is not available.",
-                    statusCode: StatusCodes.Status500InternalServerError
-                );
+                return StatusCode(500, "Authentication service is not available.");
             }
 
-            var tokenResponse = await _authService.GenerateToken(loginDto, cancellationToken);
-            if (tokenResponse == null)
-                return Unauthorized("Invalid email or password.");
+            try
+            {
+                var tokenResponse = await _authService.GenerateToken(loginDto, cancellationToken);
 
-            return Ok(tokenResponse);
+                if (tokenResponse == null)
+                    return Unauthorized("Invalid email or password.");
+
+                return Ok(tokenResponse);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Internal server error: {ex.Message}");
+            }
         }
     }
 }

@@ -15,7 +15,7 @@ namespace UserService.Auth
 {
     public class AuthService : IAuthService
     {
-        private readonly IUserRepository? _userRepository;
+        private readonly IUserRepository _userRepository;
         private readonly JwtOptions? _jwtOptions;
         public AuthService(IUserRepository userRepository, IOptions<JwtOptions> jwtOptions)
         {
@@ -25,78 +25,95 @@ namespace UserService.Auth
 
         public async Task<TokenResponse?> GenerateToken(LoginDto loginDto, CancellationToken cancellationToken)
         {
-            var userByEmail = await _userRepository!.GetByEmailAsync(loginDto.Email, cancellationToken);
-
-            if (userByEmail == null) return null;
-
-            if (!PasswordHasher.VerifyPassword(loginDto.Password, userByEmail.Password))
-                return null;
-
-            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtOptions.Key));
-            var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
-
-            var claims = new List<Claim>
+            try
             {
-                new Claim("userid", userByEmail.Id.ToString()),
-                new Claim("name", userByEmail.Username),
-                new Claim("clientId", userByEmail.ClientId),
-                new Claim("mail", userByEmail.Email),
+                var result = await _userRepository.GetByEmailAsync(loginDto.Email, cancellationToken);
+                var user = result.Value;
+
+                if (user is null || !PasswordHasher.VerifyPassword(loginDto.Password, user.Password))
+                    return null;
+
+                var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtOptions.Key));
+                var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+
+                var claims = new List<Claim>
+            {
+                new Claim("userid", user.Id.ToString()),
+                new Claim("name", user.Username),
+                new Claim("clientId", user.ClientId),
+                new Claim("mail", user.Email),
             };
 
-            var roles = userByEmail.Roles.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-            foreach (var role in roles)
-            {
-                claims.Add(new Claim(ClaimTypes.Role, role));
+                var roles = user.Roles.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+                foreach (var role in roles)
+                {
+                    claims.Add(new Claim(ClaimTypes.Role, role));
+                }
+
+                var expires = DateTime.UtcNow.AddMinutes(_jwtOptions.ExpiresInMinutes);
+
+                var token = new JwtSecurityToken(
+                    issuer: _jwtOptions.Issuer,
+                    audience: _jwtOptions.Audience,
+                    claims: claims,
+                    expires: expires,
+                    signingCredentials: creds);
+
+                return new TokenResponse
+                {
+                    Token = new JwtSecurityTokenHandler().WriteToken(token),
+                    ExpiresAt = expires
+                };
             }
-
-            var expires = DateTime.UtcNow.AddMinutes(_jwtOptions.ExpiresInMinutes);
-
-            var token = new JwtSecurityToken(
-                issuer: _jwtOptions.Issuer,
-                audience: _jwtOptions.Audience,
-                claims: claims,
-                expires: expires,
-                signingCredentials: creds);
-
-            return new TokenResponse
+            catch(Exception ex)
             {
-                Token = new JwtSecurityTokenHandler().WriteToken(token),
-                ExpiresAt = expires
-            };
+                throw new Exception("Database error: " + ex.Message);
+            }
+            
         }
 
-        public async Task<LoginResponse> LoginAsync(LoginDto loginDto, CancellationToken cancellationToken)
-        {
-            var user = await _userRepository!.GetByEmailAsync(loginDto.Email, cancellationToken);
-            if (user == null) return null;
+        //public async Task<LoginResponse> LoginAsync(LoginDto loginDto, CancellationToken cancellationToken)
+        //{
+        //    var user = await _userRepository!.GetByEmailAsync(loginDto.Email, cancellationToken);
+        //    if (user == null) return null;
 
-            if (!PasswordHasher.VerifyPassword(loginDto.Password, user.Password))
-                return null;
+        //    if (!PasswordHasher.VerifyPassword(loginDto.Password, user.Password))
+        //        return null;
 
-            var generatedToken = await GenerateToken(new LoginDto
-            {
-                Email = loginDto.Email,
-                Password = loginDto.Password
-            }, cancellationToken);
+        //    var generatedToken = await GenerateToken(new LoginDto
+        //    {
+        //        Email = loginDto.Email,
+        //        Password = loginDto.Password
+        //    }, cancellationToken);
 
-            return new LoginResponse
-            {
-                Token = generatedToken?.Token,
-                ExpiresAt = generatedToken!.ExpiresAt
-            };
-        }
+        //    return new LoginResponse
+        //    {
+        //        Token = generatedToken?.Token,
+        //        ExpiresAt = generatedToken!.ExpiresAt
+        //    };
+        //}
 
-        public async Task<RegistrationResponse> RegisterAsync(RegisterDto registerDto, CancellationToken cancellationToken = default)
+        public async Task<RegistrationResponse?> RegisterAsync(RegisterDto registerDto, CancellationToken cancellationToken = default)
         {
             var existingUserMail = await _userRepository.GetByEmailAsync(registerDto.Email, cancellationToken);
-            if (existingUserMail != null)
+
+            if (existingUserMail.IsSuccess && existingUserMail != null)
             {
                 return new RegistrationResponse { ErrorMessage = "Email already exists." };
             }
+            else if (existingUserMail!.IsFailed)
+            {
+                return new RegistrationResponse { ErrorMessage = "Database error" };
+            }
+
             var existingUserUsername = await _userRepository.GetByUsernameAsync(registerDto.Username, cancellationToken);
-            if (existingUserUsername != null)
+            if (existingUserUsername.IsSuccess && existingUserUsername != null)
             {
                 return new RegistrationResponse { ErrorMessage = "Username already exists." };
+            }
+            else if (existingUserUsername!.IsFailed)
+            {
+                return new RegistrationResponse { ErrorMessage = "Database error" };
             }
 
             var clientId = Guid.NewGuid().ToString();
@@ -115,45 +132,46 @@ namespace UserService.Auth
             return new RegistrationResponse { User = user };
         }
 
-        public async Task<Result<UserInfo>> ValidateToken(string token)
-        {
-            if (string.IsNullOrWhiteSpace(token))
-                return Result.Fail("Invalid token");
+        //public async Task<Result<UserInfo>> ValidateToken(string token)
+        //{
+        //    if (string.IsNullOrWhiteSpace(token))
+        //        return Result.Fail("Invalid token");
 
-            try
-            {
-                var tokenHandler = new JwtSecurityTokenHandler();
-                var key = Encoding.UTF8.GetBytes(_jwtOptions.Key);
-                var principal = tokenHandler.ValidateToken(token, new TokenValidationParameters
-                {
-                    ValidateIssuer = true,
-                    ValidateAudience = true,
-                    ValidateLifetime = true,
-                    ValidIssuer = _jwtOptions.Issuer,
-                    ValidAudience = _jwtOptions.Audience,
-                    IssuerSigningKey = new SymmetricSecurityKey(key)
-                }, out SecurityToken validatedToken);
+        //    try
+        //    {
+        //        var tokenHandler = new JwtSecurityTokenHandler();
+        //        var key = Encoding.UTF8.GetBytes(_jwtOptions.Key);
+        //        var principal = tokenHandler.ValidateToken(token, new TokenValidationParameters
+        //        {
+        //            ValidateIssuer = true,
+        //            ValidateAudience = true,
+        //            ValidateLifetime = true,
+        //            ValidIssuer = _jwtOptions.Issuer,
+        //            ValidAudience = _jwtOptions.Audience,
+        //            IssuerSigningKey = new SymmetricSecurityKey(key)
+        //        }, out SecurityToken validatedToken);
 
 
-                var resp = new UserInfo
-                {
-                    UserId = int.Parse(principal.FindFirst("userid")?.Value),
-                    Username = principal.FindFirst("name")?.Value,
-                    ClientId = principal.FindFirst("clientId")?.Value,
-                    Email = principal.FindFirst("mail")?.Value,
+        //        var resp = new UserInfo
+        //        {
+        //            UserId = int.Parse(principal.FindFirst("userid")?.Value),
+        //            Username = principal.FindFirst("name")?.Value,
+        //            ClientId = principal.FindFirst("clientId")?.Value,
+        //            Email = principal.FindFirst("mail")?.Value,
 
-                };
+        //        };
 
-                return Result.Ok(resp);
-            }
-            catch (SecurityTokenExpiredException)
-            {
-                return Result.Fail("Invalid token");
-            }
-            catch (Exception ex)
-            {
-                return Result.Fail("Invalid token");
-            }
-        }
+        //        return Result.Ok(resp);
+        //    }
+        //    catch (SecurityTokenExpiredException)
+        //    {
+        //        return Result.Fail("Invalid token");
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        return Result.Fail("Invalid token");
+        //    }
+        //}
+    
     }
 }

@@ -51,7 +51,7 @@ namespace UserService
             app.UseHttpsRedirection();
             app.UseSwagger();
             app.UseSwaggerUI();
-            app.UseJwtAuthentication();
+            //app.UseJwtAuthentication();
             app.UseAuthentication();
             app.UseAuthorization();
 
