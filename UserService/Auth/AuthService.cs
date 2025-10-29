@@ -37,17 +37,17 @@ namespace UserService.Auth
                 var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
                 var claims = new List<Claim>
-            {
-                new Claim("userid", user.Id.ToString()),
-                new Claim("name", user.Username),
-                new Claim("clientId", user.ClientId),
-                new Claim("mail", user.Email),
-            };
+                {
+                    new Claim(ClaimConstants.UserId, user.Id.ToString()),
+                    new Claim(ClaimConstants.Name, user.Username),
+                    new Claim(ClaimConstants.ClientId, user.ClientId),
+                    new Claim(ClaimConstants.Mail, user.Email),
+                };
 
                 var roles = user.Roles.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
                 foreach (var role in roles)
                 {
-                    claims.Add(new Claim(ClaimTypes.Role, role));
+                    claims.Add(new Claim(ClaimConstants.Roles, role));
                 }
 
                 var expires = DateTime.UtcNow.AddMinutes(_jwtOptions.ExpiresInMinutes);
@@ -161,10 +161,10 @@ namespace UserService.Auth
 
                 var resp = new UserInfo
                 {
-                    UserId = int.Parse(principal.FindFirst("userid")?.Value),
-                    Username = principal.FindFirst("name")?.Value,
-                    ClientId = principal.FindFirst("clientId")?.Value,
-                    Email = principal.FindFirst("mail")?.Value,
+                    UserId = int.Parse(principal.FindFirst(ClaimConstants.UserId)?.Value),
+                    Username = principal.FindFirst(ClaimConstants.Name)?.Value,
+                    ClientId = principal.FindFirst(ClaimConstants.ClientId)?.Value,
+                    Email = principal.FindFirst(ClaimConstants.Mail)?.Value,
                 };
 
                 return Result.Ok(resp);
