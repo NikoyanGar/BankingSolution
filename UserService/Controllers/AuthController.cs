@@ -45,29 +45,17 @@ namespace UserService.Controllers
         [HttpPost("login")]
         public async Task<ActionResult<LoginResponse>> Login([FromBody] LoginDto loginDto, CancellationToken cancellationToken)
         {
-            if (_loginValidator is null)
-            {
-                return Problem(
-                    detail: "Validation service is not available.",
-                    statusCode: StatusCodes.Status500InternalServerError
-                );
-            }
-
-            var result = await _loginValidator.ValidateAsync(loginDto);
+            var result = await _loginValidator!.ValidateAsync(loginDto);
             if (!result.IsValid)
             {
                 return BadRequest(new ValidationProblemDetails(result.ToDictionary()));
             }
 
-            if (_authService is null)
-            {
-                return StatusCode(500, "Authentication service is not available.");
-            }
-            var loginResponse = await _authService.LoginAsync(loginDto, cancellationToken);
+            var loginResponse = await _authService!.LoginAsync(loginDto, cancellationToken);
             if (loginResponse == null)
                 return Unauthorized("Invalid credentials.");
 
-            return Ok(loginResponse);
+            return Ok(loginResponse.Value);
         }
 
 
@@ -103,67 +91,41 @@ namespace UserService.Controllers
         [HttpPost("register")]
         public async Task<ActionResult<RegistrationResponse>> Register([FromBody] RegisterDto registerDto, CancellationToken cancellationToken)
         {
-            if (_registerValidator is null)
-            {
-                return Problem(
-                    detail: "Validation service is not available.",
-                    statusCode: StatusCodes.Status500InternalServerError
-                );
-            }
-
-            var result = await _registerValidator.ValidateAsync(registerDto);
+            var result = await _registerValidator!.ValidateAsync(registerDto);
             if (!result.IsValid)
             {
                 return BadRequest(new ValidationProblemDetails(result.ToDictionary()));
             }
 
-            if (_authService is null)
+            var registerResponse = await _authService!.RegisterAsync(registerDto, cancellationToken);
+            if (registerResponse.IsFailed)
             {
-                return StatusCode(500, "Authentication service is not available.");
-            }
-
-            var registerResponse = await _authService.RegisterAsync(registerDto, cancellationToken);
-            if (!string.IsNullOrEmpty(registerResponse!.ErrorMessage))
-            {
-                return StatusCode(500, registerResponse.ErrorMessage);
+                return StatusCode(500, registerResponse.Errors);
             }
 
             return CreatedAtAction(
                 nameof(Register),
-                new { id = registerResponse?.User?.Id }, registerResponse?.User);
+                registerResponse?.Value);
         }
 
 
         [HttpPost("token")]
         public async Task<ActionResult<TokenResponse>> GenerateToken([FromBody] LoginDto loginDto, CancellationToken cancellationToken)
         {
-            if (_loginValidator is null)
-            {
-                return Problem(
-                    detail: "Validation service is not available.",
-                    statusCode: StatusCodes.Status500InternalServerError
-                );
-            }
-
-            var result = await _loginValidator.ValidateAsync(loginDto);
+            var result = await _loginValidator!.ValidateAsync(loginDto);
             if (!result.IsValid)
             {
                 return BadRequest(new ValidationProblemDetails(result.ToDictionary()));
             }
 
-            if (_authService is null)
-            {
-                return StatusCode(500, "Authentication service is not available.");
-            }
-
             try
             {
-                var tokenResponse = await _authService.GenerateToken(loginDto, cancellationToken);
+                var tokenResponse = await _authService!.GenerateToken(loginDto, cancellationToken);
 
                 if (tokenResponse == null)
                     return Unauthorized("Invalid email or password.");
 
-                return Ok(tokenResponse);
+                return Ok(tokenResponse.Value);
             }
             catch (Exception ex)
             {

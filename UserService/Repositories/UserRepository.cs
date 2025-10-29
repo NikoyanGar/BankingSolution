@@ -16,12 +16,6 @@ namespace UserService.Repositories
 
         public async Task<Result> Create(User user, CancellationToken cancellationToken = default)
         {
-            if(user is null)
-                return Result.Fail("User cannot be null.");
-
-            if (_userDbContext is null)
-                throw new InvalidOperationException("Database context is not initialized.");
-
             try
             {
                 await _userDbContext.Users.AddAsync(user, cancellationToken);
@@ -52,12 +46,6 @@ namespace UserService.Repositories
 
         public async Task<Result<User?>> GetByEmailAsync(string email, CancellationToken cancellationToken = default)
         {
-            if (string.IsNullOrWhiteSpace(email))
-                throw new ArgumentException("Email cannot be null or empty.", nameof(email));
-
-            if (_userDbContext is null)
-                throw new InvalidOperationException("Database context is not initialized.");
-
             try
             {
                 var user = await _userDbContext.Users.FirstOrDefaultAsync(userItem => userItem.Email.ToLower() == email.ToString().ToLower(), cancellationToken);
@@ -71,12 +59,6 @@ namespace UserService.Repositories
 
         public async Task<Result<User?>> GetByUsernameAsync(string username, CancellationToken cancellationToken = default)
         {
-            if (username is null)
-                return Result.Fail("Username cannot be null.");
-
-            if (_userDbContext is null)
-                throw new InvalidOperationException("Database context is not initialized.");
-
             try
             {
                 var user = await _userDbContext.Users.FirstOrDefaultAsync(userItem => userItem.Username.ToLower() == username.ToString().ToLower(), cancellationToken);
@@ -86,12 +68,6 @@ namespace UserService.Repositories
             {
                 return Result.Fail($"Failed to get user by username: {ex.Message}");
             }
-        }
-
-        public void Update(User user)
-        {
-            _userDbContext?.Users.Update(user);
-            _userDbContext.SaveChangesAsync();
         }
     }
 }

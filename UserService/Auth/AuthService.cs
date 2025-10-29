@@ -23,7 +23,7 @@ namespace UserService.Auth
             _jwtOptions = jwtOptions.Value;
         }
 
-        public async Task<TokenResponse?> GenerateToken(LoginDto loginDto, CancellationToken cancellationToken)
+        public async Task<Result<TokenResponse?>> GenerateToken(LoginDto loginDto, CancellationToken cancellationToken)
         {
             try
             {
@@ -31,7 +31,7 @@ namespace UserService.Auth
                 var user = result.Value;
 
                 if (user is null || !PasswordHasher.VerifyPassword(loginDto.Password, user.Password))
-                    return null;
+                    return null!;
 
                 var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtOptions.Key));
                 var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
@@ -67,26 +67,25 @@ namespace UserService.Auth
             }
             catch(Exception ex)
             {
-                throw new Exception("Database error: " + ex.Message);
+                return Result.Fail<TokenResponse?>(ex.Message);
             }
-            
         }
 
-        public async Task<LoginResponse> LoginAsync(LoginDto loginDto, CancellationToken cancellationToken)
+        public async Task<Result<LoginResponse?>> LoginAsync(LoginDto loginDto, CancellationToken cancellationToken)
         {
             var result = await _userRepository.GetByEmailAsync(loginDto.Email, cancellationToken);
 
             if (result.IsFailed)
             {
-                return new LoginResponse { ErrorMessage = "Database error" };
+                return Result.Fail<LoginResponse?>("Database error");
             }
 
-            if (result.Value == null) return new LoginResponse { ErrorMessage = "User not found." };
+            if (result.Value == null) return Result.Fail<LoginResponse?>("User not found.");
 
             var user = result.Value;
 
             if (!PasswordHasher.VerifyPassword(loginDto.Password, user.Password))
-                return new LoginResponse { ErrorMessage = "Invalid credentials." };
+                return Result.Fail<LoginResponse?>("Invalid credentials.");
 
             var generatedToken = await GenerateToken(new LoginDto
             {
@@ -96,32 +95,32 @@ namespace UserService.Auth
 
             return new LoginResponse
             {
-                Token = generatedToken?.Token,
-                ExpiresAt = generatedToken!.ExpiresAt
+                Token = generatedToken.Value!.Token,
+                ExpiresAt = generatedToken.Value!.ExpiresAt
             };
         }
 
-        public async Task<RegistrationResponse?> RegisterAsync(RegisterDto registerDto, CancellationToken cancellationToken = default)
+        public async Task<Result<RegistrationResponse?>> RegisterAsync(RegisterDto registerDto, CancellationToken cancellationToken = default)
         {
             var existingUserMail = await _userRepository.GetByEmailAsync(registerDto.Email, cancellationToken);
 
             if (existingUserMail.IsSuccess && existingUserMail.Value != null)
             {
-                return new RegistrationResponse { ErrorMessage = "Email already exists." };
+                return Result.Fail<RegistrationResponse?>("Email already exists.");
             }
             else if (existingUserMail!.IsFailed)
             {
-                return new RegistrationResponse { ErrorMessage = "Database error" };
+                return Result.Fail<RegistrationResponse?>("Database error");
             }
 
             var existingUserUsername = await _userRepository.GetByUsernameAsync(registerDto.Username, cancellationToken);
             if (existingUserUsername.IsSuccess && existingUserUsername.Value != null)
             {
-                return new RegistrationResponse { ErrorMessage = "Username already exists." };
+                return Result.Fail<RegistrationResponse?>("Username already exists.");
             }
             else if (existingUserUsername!.IsFailed)
             {
-                return new RegistrationResponse { ErrorMessage = "Database error" };
+                return Result.Fail<RegistrationResponse?>("Database error");
             }
 
             var clientId = Guid.NewGuid().ToString();
@@ -137,10 +136,16 @@ namespace UserService.Auth
             };
 
             await _userRepository.Create(user, cancellationToken);
-            return new RegistrationResponse { User = user };
+            return new RegistrationResponse 
+            { 
+                ClientId = user.ClientId,
+                Username = user.Username,
+                Email = user.Email,
+                Roles = user.Roles
+            };
         }
 
-        public async Task<Result<UserInfo>> ValidateToken(string token)
+        public async Task<Result<UserInfo?>> ValidateToken(string token)
         {
             if (string.IsNullOrWhiteSpace(token))
                 return Result.Fail("Invalid token");

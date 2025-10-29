@@ -48,7 +48,7 @@ namespace UserService.Services
             existing.FirstName = user.FirstName;
             existing.Email = user.Email;
 
-            _userRepository.Update(existing);
+            //_userRepository.Update(existing);
 
             return existing;
         }
