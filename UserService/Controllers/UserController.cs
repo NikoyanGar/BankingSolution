@@ -20,7 +20,7 @@ namespace UserService.Controllers
             _userValidator = uservalidator;
             _idValidator = idValidator;
         }
-
+        /*
         [HttpGet("GetAllUsers")]
         public async Task<IActionResult> GetAllUsers(CancellationToken cancelationToken)
         {
@@ -40,7 +40,6 @@ namespace UserService.Controllers
             User user = await _userCrudService.GetByIdAsync(id, cancelationToken);
             return user == null ? NotFound() : Ok(user);
         }
-
         [HttpPost("Create")]
         public async Task<object> Create([FromBody] User user, CancellationToken cancelationToken)
         {
@@ -79,6 +78,6 @@ namespace UserService.Controllers
             bool deleted = await _userCrudService.DeleteAsync(id, cancelationToken);
             return deleted ? Ok() : NotFound();
         }
-
+        */
     }
 }

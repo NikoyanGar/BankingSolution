@@ -34,14 +34,30 @@ namespace UserService.Repositories
             _userDbContext.SaveChangesAsync();
         }
 
-        public async Task<List<User>> GetAllAsync(CancellationToken cancellationToken = default)
+        public async Task<Result<List<User>>> GetAllAsync(CancellationToken cancellationToken = default)
         {
-            return await _userDbContext.Users.ToListAsync(cancellationToken);
+            try
+            {
+                var users = await _userDbContext.Users.ToListAsync(cancellationToken);
+                return Result.Ok<List<User>>(users);
+            }
+            catch (Exception ex)
+            {
+                return Result.Fail<List<User>>($"Database error: {ex.Message}");
+            }
         }
 
-        public async Task<User> GetByIdAsync(int id, CancellationToken cancellationToken = default)
+        public async Task<Result<User?>> GetByIdAsync(int id, CancellationToken cancellationToken = default)
         {
-            return await _userDbContext.Users.FindAsync(id, cancellationToken);
+            try
+            {
+                var user = await _userDbContext.Users.FindAsync(id, cancellationToken);
+                return Result.Ok<User?>(user);
+            }
+            catch (Exception ex)
+            {
+                return Result.Fail<User?>($"Database error: {ex.Message}");
+            }
         }
 
         public async Task<Result<User?>> GetByEmailAsync(string email, CancellationToken cancellationToken = default)
@@ -49,7 +65,7 @@ namespace UserService.Repositories
             try
             {
                 var user = await _userDbContext.Users.FirstOrDefaultAsync(userItem => userItem.Email.ToLower() == email.ToString().ToLower(), cancellationToken);
-                return Result.Ok(user);
+                return Result.Ok<User?>(user);
             }
             catch (Exception ex)
             {
@@ -62,12 +78,13 @@ namespace UserService.Repositories
             try
             {
                 var user = await _userDbContext.Users.FirstOrDefaultAsync(userItem => userItem.Username.ToLower() == username.ToString().ToLower(), cancellationToken);
-                return Result.Ok(user);
+                return Result.Ok<User?>(user);
             }
             catch (Exception ex)
             {
-                return Result.Fail($"Failed to get user by username: {ex.Message}");
+                return Result.Fail<User?>($"Failed to get user by username: {ex.Message}");
             }
         }
+    
     }
 }

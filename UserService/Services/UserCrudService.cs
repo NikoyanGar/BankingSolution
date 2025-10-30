@@ -20,7 +20,7 @@ namespace UserService.Services
             await _userRepository.Create(user, cancellationToken);
             return user;
         }
-
+        /*
         public async Task<bool> DeleteAsync(int id, CancellationToken cancellationToken)
         {
             var existing = await _userRepository.GetByIdAsync(id, cancellationToken);
@@ -52,5 +52,6 @@ namespace UserService.Services
 
             return existing;
         }
+    */
     }
 }
