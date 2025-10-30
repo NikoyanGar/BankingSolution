@@ -1,7 +1,7 @@
 ﻿using FluentValidation;
 using Microsoft.AspNetCore.Mvc;
 using UserService.Auth;
-using UserService.Models.DTOs;
+using UserService.Models.Requests;
 using UserService.Models.Responses;
 using static UserService.Middlewares.AuthenticationMiddleware;
 
@@ -12,13 +12,13 @@ namespace UserService.Controllers
     public class AuthController : ControllerBase
     {
         private readonly IAuthService? _authService;
-        private readonly IValidator<RegisterDto>? _registerValidator;
-        private readonly IValidator<LoginDto>? _loginValidator;
+        private readonly IValidator<RegisterRequest>? _registerValidator;
+        private readonly IValidator<LoginRequest>? _loginValidator;
         private readonly IValidator<string>? _tokenValidator;
 
         public AuthController(IAuthService authService,
-            IValidator<RegisterDto> registerValidator,
-            IValidator<LoginDto>? loginValidator,
+            IValidator<RegisterRequest> registerValidator,
+            IValidator<LoginRequest>? loginValidator,
             IValidator<string>? tokenValidator)
         {
             _authService = authService;
@@ -43,15 +43,15 @@ namespace UserService.Controllers
 
 
         [HttpPost("login")]
-        public async Task<ActionResult<LoginResponse>> Login([FromBody] LoginDto loginDto, CancellationToken cancellationToken)
+        public async Task<ActionResult<LoginResponse>> Login([FromBody] LoginRequest loginRequest, CancellationToken cancellationToken)
         {
-            var result = await _loginValidator!.ValidateAsync(loginDto);
+            var result = await _loginValidator!.ValidateAsync(loginRequest);
             if (!result.IsValid)
             {
                 return BadRequest(new ValidationProblemDetails(result.ToDictionary()));
             }
 
-            var loginResponse = await _authService!.LoginAsync(loginDto, cancellationToken);
+            var loginResponse = await _authService!.LoginAsync(loginRequest, cancellationToken);
             if (loginResponse == null)
                 return Unauthorized("Invalid credentials.");
 
@@ -89,15 +89,15 @@ namespace UserService.Controllers
 
 
         [HttpPost("register")]
-        public async Task<ActionResult<RegistrationResponse>> Register([FromBody] RegisterDto registerDto, CancellationToken cancellationToken)
+        public async Task<ActionResult<RegistrationResponse>> Register([FromBody] RegisterRequest registerRequest, CancellationToken cancellationToken)
         {
-            var result = await _registerValidator!.ValidateAsync(registerDto);
+            var result = await _registerValidator!.ValidateAsync(registerRequest);
             if (!result.IsValid)
             {
                 return BadRequest(new ValidationProblemDetails(result.ToDictionary()));
             }
 
-            var registerResponse = await _authService!.RegisterAsync(registerDto, cancellationToken);
+            var registerResponse = await _authService!.RegisterAsync(registerRequest, cancellationToken);
             if (registerResponse.IsFailed)
             {
                 return StatusCode(500, registerResponse.Errors);
@@ -110,9 +110,9 @@ namespace UserService.Controllers
 
 
         [HttpPost("token")]
-        public async Task<ActionResult<TokenResponse>> GenerateToken([FromBody] LoginDto loginDto, CancellationToken cancellationToken)
+        public async Task<ActionResult<TokenResponse>> GenerateToken([FromBody] LoginRequest loginRequest, CancellationToken cancellationToken)
         {
-            var result = await _loginValidator!.ValidateAsync(loginDto);
+            var result = await _loginValidator!.ValidateAsync(loginRequest);
             if (!result.IsValid)
             {
                 return BadRequest(new ValidationProblemDetails(result.ToDictionary()));
@@ -120,7 +120,7 @@ namespace UserService.Controllers
 
             try
             {
-                var tokenResponse = await _authService!.GenerateToken(loginDto, cancellationToken);
+                var tokenResponse = await _authService!.GenerateToken(loginRequest, cancellationToken);
 
                 if (tokenResponse == null)
                     return Unauthorized("Invalid email or password.");

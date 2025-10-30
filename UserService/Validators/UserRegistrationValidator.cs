@@ -1,9 +1,9 @@
 ﻿using FluentValidation;
-using UserService.Models.DTOs;
+using UserService.Models.Requests;
 
 namespace UserService.Validators
 {
-    public class UserRegistrationValidator: AbstractValidator<RegisterDto>
+    public class UserRegistrationValidator: AbstractValidator<RegisterRequest>
     {
         public UserRegistrationValidator()
         {

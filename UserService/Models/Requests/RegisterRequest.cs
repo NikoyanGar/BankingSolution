@@ -1,6 +1,6 @@
-﻿namespace UserService.Models.DTOs
+﻿namespace UserService.Models.Requests
 {
-    public class RegisterDto
+    public class RegisterRequest
     {
         public required string Username { get; set; }
         public required string Password { get; set; }

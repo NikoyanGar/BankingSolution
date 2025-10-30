@@ -1,9 +1,9 @@
 ﻿using FluentValidation;
-using UserService.Models.DTOs;
+using UserService.Models.Requests;
 
 namespace UserService.Validators
 {
-    public class UserLoginValidator: AbstractValidator<LoginDto>
+    public class UserLoginValidator: AbstractValidator<LoginRequest>
     {
         public UserLoginValidator()
         {

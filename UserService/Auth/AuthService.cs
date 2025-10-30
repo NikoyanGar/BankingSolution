@@ -6,7 +6,7 @@ using System.Security.Claims;
 using System.Text;
 using UserService.Data.Entities;
 using UserService.Helpers;
-using UserService.Models.DTOs;
+using UserService.Models.Requests;
 using UserService.Models.Responses;
 using UserService.Options;
 using UserService.Repositories;
@@ -23,14 +23,14 @@ namespace UserService.Auth
             _jwtOptions = jwtOptions.Value;
         }
 
-        public async Task<Result<TokenResponse?>> GenerateToken(LoginDto loginDto, CancellationToken cancellationToken)
+        public async Task<Result<TokenResponse?>> GenerateToken(LoginRequest loginRequest, CancellationToken cancellationToken)
         {
             try
             {
-                var result = await _userRepository.GetByEmailAsync(loginDto.Email, cancellationToken);
+                var result = await _userRepository.GetByEmailAsync(loginRequest.Email, cancellationToken);
                 var user = result.Value;
 
-                if (user is null || !PasswordHasher.VerifyPassword(loginDto.Password, user.Password))
+                if (user is null || !PasswordHasher.VerifyPassword(loginRequest.Password, user.Password))
                     return null!;
 
                 var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtOptions.Key));
@@ -71,9 +71,9 @@ namespace UserService.Auth
             }
         }
 
-        public async Task<Result<LoginResponse?>> LoginAsync(LoginDto loginDto, CancellationToken cancellationToken)
+        public async Task<Result<LoginResponse?>> LoginAsync(LoginRequest loginRequest, CancellationToken cancellationToken)
         {
-            var result = await _userRepository.GetByEmailAsync(loginDto.Email, cancellationToken);
+            var result = await _userRepository.GetByEmailAsync(loginRequest.Email, cancellationToken);
 
             if (result.IsFailed)
             {
@@ -84,13 +84,13 @@ namespace UserService.Auth
 
             var user = result.Value;
 
-            if (!PasswordHasher.VerifyPassword(loginDto.Password, user.Password))
+            if (!PasswordHasher.VerifyPassword(loginRequest.Password, user.Password))
                 return Result.Fail<LoginResponse?>("Invalid credentials.");
 
-            var generatedToken = await GenerateToken(new LoginDto
+            var generatedToken = await GenerateToken(new LoginRequest
             {
-                Email = loginDto.Email,
-                Password = loginDto.Password
+                Email = loginRequest.Email,
+                Password = loginRequest.Password
             }, cancellationToken);
 
             return new LoginResponse
@@ -100,9 +100,9 @@ namespace UserService.Auth
             };
         }
 
-        public async Task<Result<RegistrationResponse?>> RegisterAsync(RegisterDto registerDto, CancellationToken cancellationToken = default)
+        public async Task<Result<RegistrationResponse?>> RegisterAsync(RegisterRequest registerRequest, CancellationToken cancellationToken = default)
         {
-            var existingUserMail = await _userRepository.GetByEmailAsync(registerDto.Email, cancellationToken);
+            var existingUserMail = await _userRepository.GetByEmailAsync(registerRequest.Email, cancellationToken);
 
             if (existingUserMail.IsSuccess && existingUserMail.Value != null)
             {
@@ -113,7 +113,7 @@ namespace UserService.Auth
                 return Result.Fail<RegistrationResponse?>("Database error");
             }
 
-            var existingUserUsername = await _userRepository.GetByUsernameAsync(registerDto.Username, cancellationToken);
+            var existingUserUsername = await _userRepository.GetByUsernameAsync(registerRequest.Username, cancellationToken);
             if (existingUserUsername.IsSuccess && existingUserUsername.Value != null)
             {
                 return Result.Fail<RegistrationResponse?>("Username already exists.");
@@ -126,12 +126,12 @@ namespace UserService.Auth
             var clientId = Guid.NewGuid().ToString();
             var user = new User
             {
-                Username = registerDto.Username,
-                FirstName = registerDto.FirstName,
-                LastName = registerDto.LastName,
-                Email = registerDto.Email,
-                Password = PasswordHasher.HashPassword(registerDto.Password),
-                Roles = registerDto.Roles,
+                Username = registerRequest.Username,
+                FirstName = registerRequest.FirstName,
+                LastName = registerRequest.LastName,
+                Email = registerRequest.Email,
+                Password = PasswordHasher.HashPassword(registerRequest.Password),
+                Roles = registerRequest.Roles,
                 ClientId = clientId
             };
 
