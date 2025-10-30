@@ -1,7 +1,7 @@
 using FluentValidation;
 using Microsoft.AspNetCore.Mvc;
-using System.Threading;
 using UserService.Data.Entities;
+using UserService.Models.Responses;
 using UserService.Services;
 
 namespace UserService.Controllers
@@ -20,64 +20,82 @@ namespace UserService.Controllers
             _userValidator = uservalidator;
             _idValidator = idValidator;
         }
-        /*
-        [HttpGet("GetAllUsers")]
+        
+
+        [HttpGet]
         public async Task<IActionResult> GetAllUsers(CancellationToken cancelationToken)
         {
-            List<User> users = await _userCrudService.GetAllAsync(cancelationToken);
-            return Ok(users);
+            var users = await _userCrudService!.GetAllAsync(cancelationToken);
+            if (users.IsFailed)
+                return BadRequest();
+            return Ok(users.Value);
         }
-
-        [HttpGet("GetById")]
-        public async Task<object> GetById([FromQuery] int id, CancellationToken cancelationToken)
+        
+        [HttpGet("{id:int}")]
+        public async Task<IActionResult> GetById(int id, CancellationToken cancelationToken)
         {
-            var validationResult = await _idValidator.ValidateAsync(id);
-            if (!validationResult.IsValid)
+            var result = await _idValidator.ValidateAsync(id);
+            if (!result.IsValid)
             {
-                return Results.ValidationProblem(validationResult.ToDictionary());
+                return BadRequest(new ValidationProblemDetails(result.ToDictionary()));
             }
 
-            User user = await _userCrudService.GetByIdAsync(id, cancelationToken);
-            return user == null ? NotFound() : Ok(user);
+            var user = await _userCrudService!.GetByIdAsync(id, cancelationToken);
+            if (user.IsFailed)
+                return BadRequest();
+
+            return user.Value == null ? NotFound() : Ok(user.Value);
         }
-        [HttpPost("Create")]
-        public async Task<object> Create([FromBody] User user, CancellationToken cancelationToken)
+        
+
+        [HttpPost]
+        public async Task<IActionResult> Create([FromBody] User user, CancellationToken cancelationToken)
         {
-            var validationResult = await _userValidator.ValidateAsync(user);
-            if (!validationResult.IsValid)
+            var result = await _userValidator.ValidateAsync(user);
+            if (!result.IsValid)
             {
-                return Results.ValidationProblem(validationResult.ToDictionary());
+                return BadRequest(new ValidationProblemDetails(result.ToDictionary()));
             }
 
-            User created = await _userCrudService.CreateAsync(user, cancelationToken);
-            return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
-        }
+            var created = await _userCrudService!.CreateAsync(user, cancelationToken);
+            if (created.IsFailed)
+                return BadRequest();
 
-        [HttpPut("Update")]
-        public async Task<object> Update([FromQuery] User user, CancellationToken cancelationToken)
+            return Created(nameof(GetById), created.Value);
+        }
+        
+
+        [HttpPut("{id:int}")]
+        public async Task<IActionResult> Update(int id, [FromBody] User user, CancellationToken cancelationToken)
         {
-            var validationResult = await _userValidator.ValidateAsync(user);
-            if (!validationResult.IsValid)
+            var result = await _userValidator.ValidateAsync(user);
+            if (!result.IsValid)
             {
-                return Results.ValidationProblem(validationResult.ToDictionary());
+                return BadRequest(new ValidationProblemDetails(result.ToDictionary()));
             }
 
-            User updated = await _userCrudService.UpdateAsync(user.Id, user, cancelationToken);
-            return updated == null ? NotFound() : Ok(updated);
-        }
+            var updated = await _userCrudService!.UpdateAsync(id, user, cancelationToken);
+            if(updated.IsFailed)
+                return BadRequest();
 
-        [HttpDelete("Delete")]
-        public async Task<object> Delete([FromBody] int id, CancellationToken cancelationToken)
+            return updated.Value == null ? NotFound() : Ok(updated.Value);
+        }
+        
+        
+        [HttpDelete("{id:int}")]
+        public async Task<IActionResult> Delete(int id, CancellationToken cancelationToken)
         {
-            var validationResult = await _idValidator.ValidateAsync(id);
-            if (!validationResult.IsValid)
+            var result = await _idValidator.ValidateAsync(id);
+            if (!result.IsValid)
             {
-                return Results.ValidationProblem(validationResult.ToDictionary());
+                return BadRequest(new ValidationProblemDetails(result.ToDictionary()));
             }
 
-            bool deleted = await _userCrudService.DeleteAsync(id, cancelationToken);
-            return deleted ? Ok() : NotFound();
+            var deleted = await _userCrudService!.DeleteAsync(id, cancelationToken);
+            if (deleted.IsFailed)
+                return BadRequest();
+
+            return deleted.Value ? NoContent() : NotFound();
         }
-        */
     }
 }

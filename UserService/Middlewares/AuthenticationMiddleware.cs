@@ -45,7 +45,7 @@ namespace UserService.Middlewares
 
                     if (!userRoles.Intersect(roleAttr.Roles.Split(',')).Any())
                     {
-                        _logger.LogWarning("User lacks required roles: {Roles}", roleAttr.Roles);
+                        _logger!.LogWarning("User lacks required roles: {Roles}", roleAttr.Roles);
                         context.Response.StatusCode = StatusCodes.Status403Forbidden;
                         await context.Response.WriteAsJsonAsync(new { message = "Forbidden: insufficient role" });
                         return;
@@ -58,7 +58,7 @@ namespace UserService.Middlewares
                 }
                 else
                 {
-                    _logger?.LogWarning("Token validation failed: {Errors}", string.Join(", ", userResult.Errors));
+                    _logger!.LogWarning("Token validation failed: {Errors}", string.Join(", ", userResult.Errors));
                     throw new SecurityTokenException("Invalid token");
                 }
             }

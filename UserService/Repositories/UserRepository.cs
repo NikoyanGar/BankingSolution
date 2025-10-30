@@ -1,7 +1,9 @@
 ﻿using FluentResults;
 using Microsoft.EntityFrameworkCore;
+using System.Threading;
 using UserService.Data;
 using UserService.Data.Entities;
+using UserService.Models.Responses;
 
 namespace UserService.Repositories
 {
@@ -28,35 +30,63 @@ namespace UserService.Repositories
             }
         }
 
-        public void Delete(User user)
+        public async Task<Result> Delete(int id, CancellationToken cancellationToken = default)
         {
-            _userDbContext.Users.Remove(user);
-            _userDbContext.SaveChangesAsync();
+            try
+            {
+                var user = await _userDbContext.Users.FirstOrDefaultAsync(u => u.Id == id, cancellationToken);
+                if (user is null)
+                    return null!;
+
+                _userDbContext.Users.Remove(user);
+                await _userDbContext!.SaveChangesAsync(cancellationToken);
+                return Result.Ok();
+            }
+            catch (Exception ex)
+            {
+                return Result.Fail($"Failed to delete user: {ex.Message}");
+            }
         }
 
-        public async Task<Result<List<User>>> GetAllAsync(CancellationToken cancellationToken = default)
+        public async Task<Result<List<UserResponse>>> GetAllAsync(CancellationToken cancellationToken = default)
         {
             try
             {
                 var users = await _userDbContext.Users.ToListAsync(cancellationToken);
-                return Result.Ok<List<User>>(users);
+                var userResponses = users.Select(user => new UserResponse
+                {
+                    Id = user.Id,
+                    Username = user.Username,
+                    Email = user.Email,
+                    ClientId = user.ClientId,
+                    Roles = user.Roles
+                }).ToList();
+                return Result.Ok<List<UserResponse>>(userResponses);
             }
             catch (Exception ex)
             {
-                return Result.Fail<List<User>>($"Database error: {ex.Message}");
+                return Result.Fail<List<UserResponse>>($"Database error: {ex.Message}");
             }
         }
 
-        public async Task<Result<User?>> GetByIdAsync(int id, CancellationToken cancellationToken = default)
+        public async Task<Result<UserResponse?>> GetByIdAsync(int id, CancellationToken cancellationToken = default)
         {
             try
             {
                 var user = await _userDbContext.Users.FindAsync(id, cancellationToken);
-                return Result.Ok<User?>(user);
+                var userResponse = new UserResponse 
+                {
+                    Id = user!.Id,
+                    Username = user.Username,
+                    Email = user.Email,
+                    ClientId = user.ClientId,
+                    Roles = user.Roles
+                };
+                return Result.Ok<UserResponse?>(userResponse);
             }
             catch (Exception ex)
             {
-                return Result.Fail<User?>($"Database error: {ex.Message}");
+                return Result.Fail<UserResponse?>($"Database error: {ex.Message}");
             }
         }
 
@@ -85,6 +115,14 @@ namespace UserService.Repositories
                 return Result.Fail<User?>($"Failed to get user by username: {ex.Message}");
             }
         }
-    
+
+        public async Task SaveChangesAsync(CancellationToken cancellationToken = default)
+        {
+            await _userDbContext.SaveChangesAsync(cancellationToken);
+        }
+        public async Task<User?> GetUserEntityByIdAsync(int id, CancellationToken cancellationToken = default)
+        {
+            return await _userDbContext.Users.FindAsync(new object[] { id }, cancellationToken);
+        }
     }
 }

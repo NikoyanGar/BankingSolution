@@ -52,7 +52,7 @@ namespace UserService.Controllers
             }
 
             var loginResponse = await _authService!.LoginAsync(loginRequest, cancellationToken);
-            if (loginResponse == null)
+            if (loginResponse.IsFailed)
                 return Unauthorized("Invalid credentials.");
 
             return Ok(loginResponse.Value);
@@ -103,7 +103,7 @@ namespace UserService.Controllers
                 return StatusCode(500, registerResponse.Errors);
             }
 
-            return CreatedAtAction(
+            return Created(
                 nameof(Register),
                 registerResponse?.Value);
         }
@@ -122,7 +122,7 @@ namespace UserService.Controllers
             {
                 var tokenResponse = await _authService!.GenerateToken(loginRequest, cancellationToken);
 
-                if (tokenResponse == null)
+                if (tokenResponse.IsFailed)
                     return Unauthorized("Invalid email or password.");
 
                 return Ok(tokenResponse.Value);
