@@ -21,12 +21,12 @@ namespace ScoringServiceAPI.Controllers
         }
 
         [HttpGet("GetByClientId")]
-        public async Task<object> GetScore([FromQuery] GetScoreModel scoreModel)
+        public async Task<IActionResult> GetScore([FromQuery] GetScoreModel scoreModel)
         {
-            var validationResult = await _getScoreValidator.ValidateAsync(scoreModel);
-            if (!validationResult.IsValid)
+            var result = await _getScoreValidator.ValidateAsync(scoreModel);
+            if (!result.IsValid)
             {
-                return Results.ValidationProblem(validationResult.ToDictionary());
+                return BadRequest(new ValidationProblemDetails(result.ToDictionary()));
             }
 
             var score = await _scoreService.GetScoreAsync(scoreModel.ClientId);
@@ -35,12 +35,12 @@ namespace ScoringServiceAPI.Controllers
         }
 
         [HttpPost("AddScore")]
-        public async Task<object> AddScore([FromBody] AddScoreModel addScoreModel)
+        public async Task<IActionResult> AddScore([FromBody] AddScoreModel addScoreModel)
         {
-            var validationResult = await _addScoreValidator.ValidateAsync(addScoreModel);
-            if (!validationResult.IsValid)
+            var result = await _addScoreValidator.ValidateAsync(addScoreModel);
+            if (!result.IsValid)
             {
-                return Results.ValidationProblem(validationResult.ToDictionary());
+                return BadRequest(new ValidationProblemDetails(result.ToDictionary()));
             }
 
             await _scoreService.AddScoreAsync(addScoreModel.ClientId, addScoreModel.Score);
