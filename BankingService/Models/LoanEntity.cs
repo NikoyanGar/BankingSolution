@@ -1,6 +1,6 @@
-﻿namespace BankingService.DTOs
+﻿namespace BankingService.Models
 {
-    public class LoanHistoryDto
+    public class LoanEntity
     {
         public string? ClientId { get; set; }
         public decimal Amount { get; set; }

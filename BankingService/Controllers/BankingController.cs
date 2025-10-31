@@ -1,4 +1,4 @@
-using BankingService.Models;
+using BankingService.Models.Requests;
 using BankingService.Services;
 using FluentValidation;
 using Microsoft.AspNetCore.Authorization;
@@ -13,13 +13,14 @@ namespace BankingService.Controllers
     public class BankingController : ControllerBase
     {
         private readonly IBankingService? _bankingServiceOp;
-        private readonly IValidator<EvaluateLoanModel>? _evaluateLoanValidator;
+        private readonly IValidator<EvaluateLoanRequest>? _evaluateLoanValidator;
 
-        public BankingController(IBankingService bankingServiceOp, IValidator<EvaluateLoanModel> evaluateLoanValidator)
+        public BankingController(IBankingService bankingServiceOp, IValidator<EvaluateLoanRequest> evaluateLoanValidator)
         {
             _bankingServiceOp = bankingServiceOp;
             _evaluateLoanValidator = evaluateLoanValidator;
         }
+
         [HttpGet("whoami")]
         public IActionResult WhoAmI()
         {
@@ -49,16 +50,19 @@ namespace BankingService.Controllers
         }
 
         [HttpPost("evaluate")]
-        public async Task<object> EvaluateLoan([FromBody] EvaluateLoanModel evaluateLoanModel)
+        public async Task<IActionResult> EvaluateLoan([FromBody] EvaluateLoanRequest evaluateLoanModel)
         {
-            var validationResult = await _evaluateLoanValidator!.ValidateAsync(evaluateLoanModel);
-            if (!validationResult.IsValid)
+            var result = await _evaluateLoanValidator!.ValidateAsync(evaluateLoanModel);
+            if (!result.IsValid)
             {
-                return Results.ValidationProblem(validationResult.ToDictionary());
+                return BadRequest(new ValidationProblemDetails(result.ToDictionary()));
             }
 
-            var result = await _bankingServiceOp!.EvaluateLoanAsync(evaluateLoanModel.ClientId, evaluateLoanModel.Amount);
-            return Ok(result);
+            var response = await _bankingServiceOp!.EvaluateLoanAsync(evaluateLoanModel.ClientId, evaluateLoanModel.Amount);
+            if (response.IsFailed)
+                return StatusCode(StatusCodes.Status500InternalServerError, new { message = response.Errors });
+
+            return Ok(response.Value);
         }
     }
 }

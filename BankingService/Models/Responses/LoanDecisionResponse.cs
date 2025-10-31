@@ -1,6 +1,6 @@
-﻿namespace BankingService.Models
+﻿namespace BankingService.Models.Responses
 {
-    public class LoanDecision
+    public class LoanDecisionResponse
     {
         public string? ClientId { get; set; }
         public decimal RequestedAmount { get; set; }

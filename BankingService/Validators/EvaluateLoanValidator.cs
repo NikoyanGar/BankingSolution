@@ -1,9 +1,9 @@
-﻿using BankingService.Models;
+﻿using BankingService.Models.Requests;
 using FluentValidation;
 
 namespace BankingService.Validators
 {
-    public class EvaluateLoanValidator: AbstractValidator<EvaluateLoanModel>
+    public class EvaluateLoanValidator: AbstractValidator<EvaluateLoanRequest>
     {
         public EvaluateLoanValidator()
         {

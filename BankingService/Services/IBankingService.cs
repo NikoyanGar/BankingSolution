@@ -1,5 +1,6 @@
 ﻿using BankingService.Clients;
-using BankingService.Models;
+using BankingService.Models.Responses;
+using FluentResults;
 
 namespace BankingService.Services
 {
@@ -14,45 +15,45 @@ namespace BankingService.Services
             _scoringClient = scoringClient;
         }
 
-        public async Task<LoanDecision> EvaluateLoanAsync(string clientId, decimal amount)
+        public async Task<Result<LoanDecisionResponse>> EvaluateLoanAsync(string clientId, decimal amount)
         {
-            var score = await _scoringClient.GetScoreAsync(clientId);
+            var score = await _scoringClient!.GetScoreAsync(clientId);
 
-            if (score == null)
+            if (score.Value == null)
             {
-                return new LoanDecision
+                return Result.Ok<LoanDecisionResponse>(new LoanDecisionResponse
                 {
                     ClientId = clientId,
                     RequestedAmount = amount,
                     Decision = "Declined",
                     Reason = "Score not found"
-                };
+                });
             }
 
-            var loanHistory = await _clientLoanClient.GetClientLoanHistoryAsync(clientId);
-            if (loanHistory.History.Count(l => !l.IsRepaid) > 1)
+            var loanHistory = await _clientLoanClient!.GetClientLoanHistoryAsync(clientId);
+            if (loanHistory.History!.Count(l => !l.IsRepaid) > 1)
             {
-                return new LoanDecision
+                return Result.Ok<LoanDecisionResponse>(new LoanDecisionResponse
                 {
                     ClientId = clientId,
                     RequestedAmount = amount,
                     Decision = "Declined",
                     Reason = "Too many unpaid loans"
-                };
+                });
             }
 
-            if (score.Score < 600)
+            if (score.Value.Score < 600)
             {
-                return new LoanDecision
+                return Result.Ok<LoanDecisionResponse>(new LoanDecisionResponse
                 {
                     ClientId = clientId,
                     RequestedAmount = amount,
                     Decision = "Declined",
                     Reason = "Low credit score"
-                };
+                });
             }
 
-            return new LoanDecision
+            return new LoanDecisionResponse
             {
                 ClientId = clientId,
                 RequestedAmount = amount,
