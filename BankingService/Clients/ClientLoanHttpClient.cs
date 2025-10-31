@@ -18,9 +18,9 @@ namespace BankingService.Clients
             //https://localhost:5002/api/Loan/getLoanHistory
 
             var requestBody = new { clientId = clientId };
-            HttpContent content = new StringContent(JsonSerializer.Serialize(requestBody), Encoding.UTF8, "application/json");
-
-            var response = await _httpClient.PostAsync("/api/Loan/getLoanHistory", content);
+            //HttpContent content = new StringContent(JsonSerializer.Serialize(requestBody), Encoding.UTF8, "application/json");
+            //https://localhost:5002/api/Loan/C1
+            var response = await _httpClient.GetAsync($"/api/Loan/{clientId}");
             response.EnsureSuccessStatusCode();
 
             var json = await response.Content.ReadAsStringAsync();

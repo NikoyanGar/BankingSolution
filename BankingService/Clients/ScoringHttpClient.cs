@@ -14,8 +14,9 @@ namespace BankingService.Clients
         public async Task<ScoringDto> GetScoreAsync(string clientId)
         {
             //[FromQuery] GetScoreModel scoreModel
-            //https://localhost:5001/api/Scoring/GetByClientId?ClientId=C001
-            var response = await _httpClient.GetAsync($"/api/Scoring/GetByClientId?ClientId={clientId}");
+            ///https://localhost:5001/api/Scoring/C1
+            var response = await _httpClient.GetAsync($"/api/Scoring/{clientId}");
+            
             if (!response.IsSuccessStatusCode) return null;
 
             return await response.Content.ReadFromJsonAsync<ScoringDto>();
