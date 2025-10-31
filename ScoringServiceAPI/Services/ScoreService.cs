@@ -1,10 +1,11 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using FluentResults;
+using Microsoft.EntityFrameworkCore;
 using ScoringServiceAPI.Data;
-using ScoringServiceAPI.Models;
+using ScoringServiceAPI.Data.Entities;
 
 namespace ScoringServiceAPI.Services
 {
-    public class ScoreService
+    public class ScoreService: IScoreService
     {
         private readonly ScoringDbContext _db;
         public ScoreService(ScoringDbContext db)
@@ -12,30 +13,57 @@ namespace ScoringServiceAPI.Services
             _db = db;
         }
 
-        public async Task<ClientScore> GetScoreAsync(string clientId)
+        public async Task<Result<ClientEntity>> GetScoreAsync(string clientId)
         {
-            return await _db.Scores.FirstOrDefaultAsync(s => s.ClientId == clientId);
+            try
+            {
+                var score = await _db.Scores.FirstOrDefaultAsync(s => s.ClientId == clientId);
+                return Result.Ok<ClientEntity>(score);
+            }
+            catch (Exception ex)
+            {
+                return Result.Fail(ex.Message);
+            }
         }
 
-        public async Task AddScoreAsync(string clientId, int value)
+        public async Task<Result> AddScoreAsync(string clientId, int value)
         {
-            var score = new ClientScore { ClientId = clientId, Score = value, UpdatedAt = DateTime.UtcNow };
-            var existing = await _db.Scores.FirstOrDefaultAsync(s => s.ClientId == score.ClientId);
-            if (existing == null)
+            try
             {
-                _db.Scores.Add(score);
+                var score = new ClientEntity { ClientId = clientId, Score = value, UpdatedAt = DateTime.UtcNow };
+                var existing = await _db.Scores.FirstOrDefaultAsync(s => s.ClientId == score.ClientId);
+                if (existing == null)
+                {
+                    _db.Scores.Add(score);
+                }
+                else
+                {
+                    existing.Score = score.Score;
+                    existing.UpdatedAt = DateTime.UtcNow;
+                }
+                await _db.SaveChangesAsync();
+                return Result.Ok();
             }
-            else
+            catch (Exception ex)
             {
-                existing.Score = score.Score;
-                existing.UpdatedAt = DateTime.UtcNow;
+                return Result.Fail(ex.Message);
             }
-            await _db.SaveChangesAsync();
         }
 
-        public async Task<List<ClientScore>> GetAllScoresAsync()
+        public async Task<Result<List<ClientEntity>?>> GetAllScoresAsync()
         {
-            return await _db.Scores.ToListAsync();
+            try
+            {
+                var scores = await _db.Scores.ToListAsync();
+                if (scores is null)
+                    return Result.Ok<List<ClientEntity>?>(new List<ClientEntity>());
+                return Result.Ok(scores);
+            }
+            catch (Exception ex)
+            {
+                return Result.Fail(ex.Message);
+            }
         }
+
     }
 }

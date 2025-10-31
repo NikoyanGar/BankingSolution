@@ -1,8 +1,7 @@
-﻿namespace ScoringServiceAPI.Models
+namespace ScoringServiceAPI.Models.Responses
 {
-    public class ClientScore
+    public class GetScoreResponse
     {
-        public int Id { get; set; }
         public string? ClientId { get; set; }
         public int Score { get; set; }
         public DateTime UpdatedAt { get; set; }

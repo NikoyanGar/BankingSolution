@@ -1,6 +1,6 @@
-﻿namespace ScoringServiceAPI.Models
+﻿namespace ScoringServiceAPI.Models.Requests
 {
-    public class AddScoreModel
+    public class AddScoreRequest
     {
         public string? ClientId { get; set; }
         public int Score { get; set; }

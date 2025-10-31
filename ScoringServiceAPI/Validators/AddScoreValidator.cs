@@ -1,9 +1,9 @@
 ﻿using FluentValidation;
-using ScoringServiceAPI.Models;
+using ScoringServiceAPI.Models.Requests;
 
 namespace ScoringServiceAPI.Validators
 {
-    public class AddScoreValidator: AbstractValidator<AddScoreModel>
+    public class AddScoreValidator: AbstractValidator<AddScoreRequest>
     {
         public AddScoreValidator()
         {
