@@ -1,7 +1,7 @@
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using ScoringServiceAPI.Data;
-using ScoringServiceAPI.Middlewares.Extensions;
+using ScoringServiceAPI.Middlewares;
 using ScoringServiceAPI.Options;
 using ScoringServiceAPI.Services;
 using ScoringServiceAPI.Validators;
@@ -39,8 +39,8 @@ namespace ScoringServiceAPI
             var app = builder.Build();
 
             // Configure the HTTP request pipeline.
-            app.UseGlobalExceptionHandler();
-            app.UseRequestLogging();
+            app.UseMiddleware<GlobalExceptionMiddleware>();
+            app.UseMiddleware<RequestLoggingMiddleware>();
             app.UseHttpsRedirection();
             app.UseSwagger();
             app.UseSwaggerUI();
