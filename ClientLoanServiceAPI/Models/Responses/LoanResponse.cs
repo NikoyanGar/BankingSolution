@@ -1,4 +1,4 @@
-﻿namespace ClientLoanServiceAPI.Models
+﻿namespace ClientLoanServiceAPI.Models.Responses
 {
     public class LoanResponse
     {

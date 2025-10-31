@@ -1,4 +1,4 @@
-﻿using ClientLoanServiceAPI.Models;
+﻿using ClientLoanServiceAPI.Models.Requests;
 using FluentValidation;
 
 namespace ClientLoanServiceAPI.Validators

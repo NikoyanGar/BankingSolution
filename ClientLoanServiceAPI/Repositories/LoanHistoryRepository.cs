@@ -14,7 +14,7 @@ namespace ClientLoanServiceAPI.Repositories
             _distributedCache = distributedCache;
         }
         // Adjust deserialization to handle both single and multiple entries
-        public async Task<List<LoanHistory>> GetLoanByClientIdAsync(string clientId)
+        public async Task<List<LoanHistory>> GetByClientIdAsync(string clientId)
         {
             var key = $"{prefix}{clientId}"; // Use consistent key prefix
             var loanInfoJson = await _distributedCache.GetStringAsync(key);
@@ -31,7 +31,7 @@ namespace ClientLoanServiceAPI.Repositories
             }
         }
         //The same 
-        public async Task AddLoanAsync(LoanHistory loanHistory)
+        public async Task AddAsync(LoanHistory loanHistory)
         {
             var key = $"{prefix}{loanHistory.ClientId}";
             var existingJson = await _distributedCache.GetStringAsync(key);

@@ -1,4 +1,6 @@
 ﻿using ClientLoanServiceAPI.Models;
+using ClientLoanServiceAPI.Models.Requests;
+using ClientLoanServiceAPI.Models.Responses;
 using ClientLoanServiceAPI.Repositories;
 
 namespace ClientLoanServiceAPI.Services
@@ -16,7 +18,7 @@ namespace ClientLoanServiceAPI.Services
         public async Task<LoanResponse> GetLoanByClientIdAsync(LoanRequest loanRequest)
         {
             //variable name loanJson is misleading here since it is actually a list of LoanHistory objects
-            var loanJson = await _loanHistoryRepository.GetLoanByClientIdAsync(loanRequest.ClientId);
+            var loanJson = await _loanHistoryRepository.GetByClientIdAsync(loanRequest.ClientId);
 
             if (loanJson == null)
             {
@@ -32,7 +34,7 @@ namespace ClientLoanServiceAPI.Services
 
         public async Task AddLoanAsync(LoanHistory loanHistory)
         {
-           await _loanHistoryRepository.AddLoanAsync(loanHistory);
+           await _loanHistoryRepository.AddAsync(loanHistory);
         }
 
     }

@@ -1,4 +1,5 @@
 using ClientLoanServiceAPI.Models;
+using ClientLoanServiceAPI.Models.Requests;
 using ClientLoanServiceAPI.Services;
 using FluentValidation;
 using Microsoft.AspNetCore.Mvc;
@@ -22,33 +23,40 @@ namespace ClientLoanServiceAPI.Controllers
             _loanHistoryValidator = loanHistoryValidator;
         }
 
-        [HttpPost("addLoanHistory")]
-        public async Task<object> AddLoanHistory([FromBody] LoanHistory loanHistory)
+        [HttpPost]
+        public async Task<IActionResult> CreateLoanHistory([FromBody] LoanHistory loanHistory)
         {
-            var validationResult = await _loanHistoryValidator.ValidateAsync(loanHistory);
-            if (!validationResult.IsValid)
+            var result = await _loanHistoryValidator.ValidateAsync(loanHistory);
+            if (!result.IsValid)
             {
-                return Results.ValidationProblem(validationResult.ToDictionary());
+                return BadRequest(new ValidationProblemDetails(result.ToDictionary()));
             }
 
             await _loanHistoryService.AddLoanAsync(loanHistory);
-            return Ok(
+            return Created(
+                nameof(GetLoanHistoryByClientId),
                 new {
                     message = "Loan added successfully", loanHistory 
                 }
             );
         }
+
         //handle not found case too
-        [HttpPost("getLoanHistory")]
-        public async Task<object> GetLoanHistory([FromBody] LoanRequest loanRequest)
+        [HttpGet("{clientId}")]
+        public async Task<IActionResult> GetLoanHistoryByClientId([FromRoute] string clientId)
         {
-            var validationResult = await _loanRequestValidator.ValidateAsync(loanRequest);
-            if (!validationResult.IsValid)
+            var loanRequest = new LoanRequest { ClientId = clientId };
+            var result = await _loanRequestValidator.ValidateAsync(loanRequest);
+            if (!result.IsValid)
             {
-                return Results.ValidationProblem(validationResult.ToDictionary());
+                return BadRequest(new ValidationProblemDetails(result.ToDictionary()));
             }
 
             var loans = await _loanHistoryService.GetLoanByClientIdAsync(loanRequest);
+            if (loans == null)
+            {
+                return NotFound(new { message = $"No loan history found for client {clientId}" });
+            }
             return Ok(loans);
         }
     }
