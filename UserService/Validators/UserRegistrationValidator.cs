@@ -1,9 +1,9 @@
 ﻿using FluentValidation;
-using UserService.Models;
+using UserService.Models.Requests;
 
 namespace UserService.Validators
 {
-    public class UserRegistrationValidator: AbstractValidator<RegisterDto>
+    public class UserRegistrationValidator: AbstractValidator<RegisterRequest>
     {
         public UserRegistrationValidator()
         {
@@ -52,7 +52,6 @@ namespace UserService.Validators
                 .Matches(@"[a-z]+").WithMessage("Your password must contain at least one lowercase letter.")
                 .Matches(@"[0-9]+").WithMessage("Your password must contain at least one number.")
                 .Matches(@"[!@#\$%\^&\*\?_~\-\(\\\)\.]+").WithMessage("Your password must contain at least one (!? *.).");
-            //RuleFor(x => x.Password).Equal(z => z.ConfirmPassword).WithMessage("Passwords do not match!");
         }
 
         private bool IsValidName(string name)

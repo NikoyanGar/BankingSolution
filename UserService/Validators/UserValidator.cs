@@ -1,5 +1,5 @@
 ﻿using FluentValidation;
-using UserService.Models;
+using UserService.Data.Entities;
 
 namespace UserService.Validators
 {

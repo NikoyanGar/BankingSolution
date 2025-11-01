@@ -1,9 +1,9 @@
-﻿using BankingService.DTOs;
+﻿using BankingService.Models.Responses;
 
 namespace BankingService.Clients
 {
     public interface IClientLoanClient
     {
-        public Task<LoanResponseDto> GetClientLoanHistoryAsync(string clientId);
+        public Task<LoanResponse> GetClientLoanHistoryAsync(string clientId);
     }
 }

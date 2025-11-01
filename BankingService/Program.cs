@@ -1,5 +1,5 @@
 using BankingService.Clients;
-using BankingService.Middlewares.Extensions;
+using BankingService.Middlewares;
 using BankingService.Services;
 using BankingService.Validators;
 using FluentValidation;
@@ -16,23 +16,21 @@ namespace BankingService
             var builder = WebApplication.CreateBuilder(args);
             var configuration = builder.Configuration;
 
-            //builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-            //.AddJwtBearer(options =>
-            //{
-            //    options.TokenValidationParameters = new TokenValidationParameters
-            //    {
-            //        ValidateIssuer = true,
-            //        ValidateAudience = true,
-            //        ValidateLifetime = true,
-            //        ValidateIssuerSigningKey = true,
-
-            //        ValidIssuer = configuration["Jwt:Issuer"],
-            //        ValidAudience = configuration["Jwt:Audience"],
-            //        IssuerSigningKey = new SymmetricSecurityKey(
-            //            Encoding.UTF8.GetBytes(configuration["Jwt:Key"])
-            //        )
-            //    };
-            //});
+            builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+            .AddJwtBearer(options =>
+            {
+                var key = Encoding.UTF8.GetBytes(configuration["JwtOptions:Key"]);
+                options.TokenValidationParameters = new TokenValidationParameters
+                {
+                    ValidateIssuer = true,
+                    ValidateAudience = true,
+                    ValidateLifetime = true,
+                    ValidateIssuerSigningKey = true,
+                    ValidIssuer = configuration["JwtOptions:Issuer"],
+                    ValidAudience = configuration["JwtOptions:Audience"],
+                    IssuerSigningKey = new SymmetricSecurityKey(key)
+                };
+            });
 
             // Services
             builder.Services.AddAuthorization();
@@ -55,16 +53,16 @@ namespace BankingService
 
             var app = builder.Build();
 
-
             // Configure the HTTP request pipeline.
-            app.UseGlobalExceptionHandler();
-            app.UseRequestLogging();
+            app.UseMiddleware<GlobalExceptionHandlingMiddleware>();
+            app.UseMiddleware<RequestLoggingMiddleware>();
             app.UseHttpsRedirection();
             app.UseSwagger();
             app.UseSwaggerUI();
 
-            app.UseAuthorization();
             app.UseRouting();
+            app.UseAuthentication();
+            app.UseAuthorization();
 
             app.MapControllers();
 

@@ -1,4 +1,6 @@
-﻿using BankingService.DTOs;
+﻿using BankingService.Models.Responses;
+using FluentResults;
+using System.Text.Json;
 
 namespace BankingService.Clients
 {
@@ -11,14 +13,20 @@ namespace BankingService.Clients
             _httpClient = httpClient;
         }
 
-        public async Task<ScoringDto> GetScoreAsync(string clientId)
+        public async Task<Result<ScoringResponse>> GetScoreAsync(string clientId)
         {
             //[FromQuery] GetScoreModel scoreModel
-            //https://localhost:5001/api/Scoring/GetByClientId?ClientId=C001
-            var response = await _httpClient.GetAsync($"/api/Scoring/GetByClientId?ClientId={clientId}");
-            if (!response.IsSuccessStatusCode) return null;
+            ///https://localhost:5001/api/Scoring/C1
+            var response = await _httpClient.GetAsync($"/api/Scoring/{clientId}");
+            
+            if (!response.IsSuccessStatusCode) return Result.Fail<ScoringResponse>("Failed to get score");
 
-            return await response.Content.ReadFromJsonAsync<ScoringDto>();
+            var scoring = await response.Content.ReadFromJsonAsync<ScoringResponse>(
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            if (scoring == null)
+                return Result.Fail<ScoringResponse>("Empty or invalid response");
+
+            return Result.Ok(scoring);
         }
     }
 }

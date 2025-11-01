@@ -1,57 +1,71 @@
 using FluentValidation;
 using Microsoft.AspNetCore.Mvc;
-using ScoringServiceAPI.Models;
+using ScoringServiceAPI.Models.Requests;
+using ScoringServiceAPI.Models.Responses;
 using ScoringServiceAPI.Services;
 
 namespace ScoringServiceAPI.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    // return type should be IActionResult, no need for additional routing
     public class ScoringController : ControllerBase
     {
         private readonly ScoreService _scoreService;
-        private readonly IValidator<GetScoreModel> _getScoreValidator;
-        private readonly IValidator<AddScoreModel> _addScoreValidator;
-        public ScoringController(ScoreService scoreService, IValidator<GetScoreModel> getScoreValidator, IValidator<AddScoreModel> addScoreValidator)
+        private readonly IValidator<GetScoreRequest> _getScoreValidator;
+        private readonly IValidator<AddScoreRequest> _addScoreValidator;
+        public ScoringController(ScoreService scoreService, IValidator<GetScoreRequest> getScoreValidator, IValidator<AddScoreRequest> addScoreValidator)
         {
             _scoreService = scoreService;
             _getScoreValidator = getScoreValidator;
             _addScoreValidator = addScoreValidator;
         }
 
-        [HttpGet("GetByClientId")]
-        public async Task<object> GetScore([FromQuery] GetScoreModel scoreModel)
+        [HttpGet("{clientId}")]
+        public async Task<ActionResult<GetScoreResponse>> GetByClientId(string clientId)
         {
-            var validationResult = await _getScoreValidator.ValidateAsync(scoreModel);
-            if (!validationResult.IsValid)
+            var result = await _getScoreValidator.ValidateAsync(new GetScoreRequest { ClientId = clientId });
+            if (!result.IsValid)
             {
-                return Results.ValidationProblem(validationResult.ToDictionary());
+                return BadRequest(new ValidationProblemDetails(result.ToDictionary()));
             }
 
-            var score = await _scoreService.GetScoreAsync(scoreModel.ClientId);
+            var score = await _scoreService.GetScoreAsync(clientId);
             if (score == null) return NotFound(new { message = "Score not found" });
-            return Ok(new { clientId = score.ClientId, score = score.Score, updatedAt = score.UpdatedAt });
+            var getScoreResponse = new GetScoreResponse
+            {
+                ClientId = score.Value.ClientId,
+                Score = score.Value.Score,
+                UpdatedAt = score.Value.UpdatedAt
+            };
+            return Ok(getScoreResponse);
         }
 
-        [HttpPost("AddScore")]
-        public async Task<object> AddScore([FromBody] AddScoreModel addScoreModel)
+        [HttpPost]
+        public async Task<ActionResult<GetScoreResponse>> CreateScore([FromBody] AddScoreRequest addScoreRequest)
         {
-            var validationResult = await _addScoreValidator.ValidateAsync(addScoreModel);
-            if (!validationResult.IsValid)
+            var result = await _addScoreValidator.ValidateAsync(addScoreRequest);
+            if (!result.IsValid)
             {
-                return Results.ValidationProblem(validationResult.ToDictionary());
+                return BadRequest(new ValidationProblemDetails(result.ToDictionary()));
             }
 
-            await _scoreService.AddScoreAsync(addScoreModel.ClientId, addScoreModel.Score);
-            return Ok(new { addScoreModel.ClientId, score = addScoreModel.Score });
+            await _scoreService.AddScoreAsync(addScoreRequest.ClientId, addScoreRequest.Score);
+            var getScoreResponse = new GetScoreResponse
+            {
+                ClientId = addScoreRequest.ClientId,
+                Score = addScoreRequest.Score,
+                UpdatedAt = DateTime.Now
+            };
+            return Created(nameof(GetByClientId), getScoreResponse);
         }
 
-        [HttpGet("AllInfo")]
-        public async Task<IActionResult> GetAllScores()
+        [HttpGet]
+        public async Task<IActionResult> GetAllAsync()
         {
             var result = await _scoreService.GetAllScoresAsync();
-            return Ok(result);
+            if (result.IsFailed)
+                return BadRequest();
+            return Ok(result.Value);
         }
     }
 }

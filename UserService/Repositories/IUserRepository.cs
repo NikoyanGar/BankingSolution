@@ -1,16 +1,18 @@
-﻿using UserService.Models;
+﻿using FluentResults;
+using UserService.Data.Entities;
+using UserService.Models.Responses;
 
 namespace UserService.Repositories
 {
     public interface IUserRepository
     {
-        public Task Create(User user);
-        public Task<List<User>> GetAllAsync();
-        public void Update(User user);
-        public Task<User> GetByIdAsync(int id);
-        public void Delete(User user);
-        public Task<User?> GetByUsernameAsync(string username);
-        public Task<User?> GetByEmailAsync(string email);
-        public Task<string> GetNextClientIdAsync();
+        public Task<Result> Create(User user, CancellationToken cancellationToken);
+        public Task<Result<List<UserResponse>>> GetAllAsync(CancellationToken cancellationToken);
+        public Task<Result<UserResponse?>> GetByIdAsync(int id, CancellationToken cancellationToken);
+        public Task<Result> Delete(int id, CancellationToken cancellationToken);
+        public Task<Result<User?>> GetByUsernameAsync(string username, CancellationToken cancellationToken);
+        public Task<Result<User?>> GetByEmailAsync(string email, CancellationToken cancellationToken);
+        public Task SaveChangesAsync(CancellationToken cancellationToken);
+        public Task<User?> GetUserEntityByIdAsync(int id, CancellationToken cancellationToken);
     }
 }

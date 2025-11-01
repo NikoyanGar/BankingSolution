@@ -1,4 +1,6 @@
-﻿using UserService.Models;
+﻿using FluentResults;
+using UserService.Data.Entities;
+using UserService.Models.Responses;
 using UserService.Repositories;
 
 namespace UserService.Services
@@ -14,42 +16,116 @@ namespace UserService.Services
             users = new List<User>();
         }
 
-        public async Task<User> CreateAsync(User user)
+        public async Task<Result<UserResponse?>> CreateAsync(User user, CancellationToken cancellationToken)
         {
-            await _userRepository.Create(user);
-            return user;
+            try
+            {
+                await _userRepository!.Create(user, cancellationToken);
+                var userResponse = new UserResponse
+                {
+                    Id = user.Id,
+                    ClientId = user.ClientId,
+                    Username = user.Username,
+                    Email = user.Email,
+                    Roles = user.Roles
+                };
+                return Result.Ok<UserResponse?>(userResponse);
+            }
+            catch(Exception ex)
+            {
+                return Result.Fail<UserResponse?>(ex.Message);
+            }
+        }
+        
+        public async Task<Result<bool>> DeleteAsync(int id, CancellationToken cancellationToken)
+        {
+            try
+            {
+                var result = await _userRepository!.Delete(id, cancellationToken);
+                if (result == null) return Result.Ok<bool>(false);
+
+                return Result.Ok<bool>(true);
+            }
+            catch (Exception ex)
+            {
+                return Result.Fail<bool>(ex.Message);
+            }
         }
 
-        public async Task<bool> DeleteAsync(int id)
+        public async Task<Result<List<UserResponse>?>> GetAllAsync(CancellationToken cancellationToken)
         {
-            var existing = await _userRepository.GetByIdAsync(id);
-            if (existing == null) return false;
-
-            _userRepository.Delete(existing);
-            return true;
+            try
+            {
+                var users = await _userRepository!.GetAllAsync(cancellationToken);
+                var userResponses = users.Value.Select(user => new UserResponse
+                {
+                    Id = user.Id,
+                    ClientId = user.ClientId,
+                    Username = user.Username,
+                    Email = user.Email,
+                    Roles = user.Roles
+                }).ToList();
+                return Result.Ok<List<UserResponse>?>(userResponses);
+            }
+            catch (Exception ex)
+            {
+                return Result.Fail<List<UserResponse>?>(ex.Message);
+            }
         }
 
-        public async Task<List<User>> GetAllAsync()
+        public async Task<Result<UserResponse?>> GetByIdAsync(int id, CancellationToken cancellationToken)
         {
-            return await _userRepository.GetAllAsync();
+            try
+            {
+                var user = await _userRepository!.GetByIdAsync(id, cancellationToken);
+                if (user.Value == null) return null!;
+                var userResponse = new UserResponse
+                {
+                    Id = user.Value!.Id,
+                    ClientId = user.Value.ClientId,
+                    Username = user.Value.Username,
+                    Email = user.Value.Email,
+                    Roles = user.Value.Roles
+                };
+                return Result.Ok<UserResponse?>(userResponse);
+            }
+            catch (Exception ex)
+            {
+                return Result.Fail<UserResponse?>(ex.Message);
+            }
         }
 
-        public async Task<User?> GetByIdAsync(int id)
+        
+        public async Task<Result<UserResponse?>> UpdateAsync(int id, User user, CancellationToken cancellationToken)
         {
-            return await _userRepository.GetByIdAsync(id);
-        }
+            try
+            {
+                var userEntity = await _userRepository!.GetUserEntityByIdAsync(id, cancellationToken);
+                if (userEntity == null) return null!;
 
-        public async Task<User?> UpdateAsync(int id, User user)
-        {
-            var existing = await _userRepository.GetByIdAsync(id);
-            if (existing == null) return null;
+                userEntity.Roles = user.Roles;
+                userEntity.Email = user.Email;
+                userEntity.FirstName = user.FirstName;
+                userEntity.LastName = user.LastName;
+                userEntity.Username = user.Username;
+                userEntity.ClientId = user.ClientId;
+                userEntity.Password = user.Password;
+                await _userRepository.SaveChangesAsync(cancellationToken);
 
-            existing.FirstName = user.FirstName;
-            existing.Email = user.Email;
-
-            _userRepository.Update(existing);
-
-            return existing;
+                var userResponse = new UserResponse
+                {
+                    Id = userEntity.Id,
+                    ClientId = userEntity.ClientId,
+                    Username = userEntity.Username,
+                    Email = userEntity.Email,
+                    Roles = userEntity.Roles
+                };
+                return Result.Ok<UserResponse?>(userResponse);
+            }
+            catch (Exception ex)
+            {
+                return Result.Fail<UserResponse?>(ex.Message);
+            }
         }
     }
 }

@@ -1,8 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.IdentityModel.Tokens;
-using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
-using System.Text;
 using UserService.Auth;
 using UserService.Options;
 
@@ -25,8 +23,6 @@ namespace UserService.Middlewares
 
         public async Task InvokeAsync(HttpContext context, IAuthService authService)
         {
-
-
             var endpoint = context.GetEndpoint();
 
             // Check if endpoint has [Roles("admin,manager")] attribute
@@ -42,14 +38,14 @@ namespace UserService.Middlewares
             if (token != null)
             {
                 var userResult = await authService.ValidateToken(token);
-                
+
                 if (roleAttr != null)
                 {
                     var userRoles = context.User.Claims.Where(c => c.Type == ClaimTypes.Role).Select(c => c.Value).ToList();
 
                     if (!userRoles.Intersect(roleAttr.Roles.Split(',')).Any())
                     {
-                        _logger.LogWarning("User lacks required roles: {Roles}", roleAttr.Roles);
+                        _logger!.LogWarning("User lacks required roles: {Roles}", roleAttr.Roles);
                         context.Response.StatusCode = StatusCodes.Status403Forbidden;
                         await context.Response.WriteAsJsonAsync(new { message = "Forbidden: insufficient role" });
                         return;
@@ -62,7 +58,7 @@ namespace UserService.Middlewares
                 }
                 else
                 {
-                    _logger?.LogWarning("Token validation failed: {Errors}", string.Join(", ", userResult.Errors));
+                    _logger!.LogWarning("Token validation failed: {Errors}", string.Join(", ", userResult.Errors));
                     throw new SecurityTokenException("Invalid token");
                 }
             }

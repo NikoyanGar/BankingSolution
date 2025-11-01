@@ -1,4 +1,4 @@
-using ClientLoanServiceAPI.Middlewares.Extensions;
+using ClientLoanServiceAPI.Middlewares;
 using ClientLoanServiceAPI.Repositories;
 using ClientLoanServiceAPI.Services;
 using ClientLoanServiceAPI.Validators;
@@ -30,8 +30,8 @@ namespace ClientLoanServiceAPI
             var app = builder.Build();
 
             // Configure the HTTP request pipeline.
-            app.UseGlobalExceptionHandler();//no nee for wrapping 
-            app.UseRequestLogging();//no nee for wrapping 
+            app.UseMiddleware<GlobalExceptionHandlingMiddleware>();
+            app.UseMiddleware<RequestLoggingMiddleware>();
             app.UseHttpsRedirection();
             app.UseSwagger();
             app.UseSwaggerUI();

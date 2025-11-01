@@ -3,7 +3,7 @@
     public class RequestLoggingMiddleware
     {
         private readonly RequestDelegate _next;
-        private readonly ILogger<RequestLoggingMiddleware> _logger;
+        private readonly ILogger<RequestLoggingMiddleware?> _logger;
 
         public RequestLoggingMiddleware(RequestDelegate next, ILogger<RequestLoggingMiddleware> logger)
         {

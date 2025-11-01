@@ -1,9 +1,10 @@
-﻿using BankingService.DTOs;
+﻿using BankingService.Models.Responses;
+using FluentResults;
 
 namespace BankingService.Clients
 {
     public interface IScoringClient
     {
-        public Task<ScoringDto> GetScoreAsync(string clientId);
+        public Task<Result<ScoringResponse>> GetScoreAsync(string clientId);
     }
 }

@@ -1,4 +1,6 @@
 ﻿using ClientLoanServiceAPI.Models;
+using ClientLoanServiceAPI.Models.Requests;
+using ClientLoanServiceAPI.Models.Responses;
 
 namespace ClientLoanServiceAPI.Services
 {
